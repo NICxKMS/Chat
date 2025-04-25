@@ -1,0 +1,120 @@
+.group {
+  margin-bottom: 1.5rem;
+  background-color: var(--bg-secondary);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s, 
+              background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.group:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.header {
+  padding: 1.2rem 1.5rem;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.header:hover {
+  background-color: var(--hover);
+}
+
+.header:focus {
+  outline: none;
+  background-color: var(--hover);
+}
+
+.titleContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.description {
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
+.expandButton {
+  background: transparent;
+  border: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--secondary-text);
+  transition: background-color 0.2s, transform 0.2s, color 0.2s;
+  margin-left: 12px;
+}
+
+.expandButton:hover {
+  background-color: var(--hover-intense);
+  color: var(--text);
+}
+
+.expandIcon {
+  fill: currentColor;
+  transition: transform 0.2s;
+}
+
+.expandButton.expanded .expandIcon {
+  transform: rotate(180deg);
+}
+
+.content {
+  padding: 0.5rem 1.5rem 1.5rem;
+  animation: slideDown 0.2s ease-out;
+  background-color: color-mix(in srgb, var(--bg-secondary) 97%, var(--accent) 3%);
+  border-top: 1px solid var(--border);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.expanded .header {
+  border-bottom-color: var(--border);
+  background-color: color-mix(in srgb, var(--bg-secondary) 97%, var(--accent) 3%);
+}
+
+.groupHeader {
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+.resetButton {
+  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing),
+              color var(--theme-transition-duration) var(--theme-transition-timing),
+              transform 0.2s;
+}
+
+.toggleIcon {
+  transition: transform 0.2s,
+              color var(--theme-transition-duration) var(--theme-transition-timing);
+} 
