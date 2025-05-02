@@ -2,6 +2,7 @@
   "name": "ai-chat-interface",
   "version": "1.7.5",
   "private": true,
+  "homepage": "https://NICxKMS.github.io/chat",
   "dependencies": {
     "@primer/octicons-react": "^19.15.1",
     "clsx": "^2.1.1",
