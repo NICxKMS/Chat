@@ -2,7 +2,7 @@
   "name": "ai-chat-interface",
   "version": "1.7.5",
   "private": true,
-  "homepage": "https://NICxKMS.github.io",
+  "homepage": "https://NICxKMS.github.io/chat",
   "dependencies": {
     "@primer/octicons-react": "^19.15.1",
     "clsx": "^2.1.1",
@@ -74,6 +74,7 @@
     "dev:fast": "cross-env REACT_APP_ENV=development FAST_REFRESH=true craco start --no-lazy",
     "build": "cross-env REACT_APP_ENV=production GENERATE_SOURCEMAP=true craco build",
     "build:prod": "cross-env REACT_APP_ENV=production craco build",
+    "build:prodcloud": "cross-env REACT_APP_ENV=production craco build --output-path cha/build",
     "build:analyze": "cross-env REACT_APP_ENV=production ANALYZE=true craco build",
     "test": "craco test",
     "test:coverage": "craco test --coverage --watchAll=false",
