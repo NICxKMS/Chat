@@ -2,6 +2,7 @@ import { memo, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { InfoIcon } from '../icons';
 import styles from './SettingsSlider.module.css';
+import commonStyles from '../common/ControlStyles.module.css';
 
 /**
  * Slider control for numeric settings
@@ -46,12 +47,11 @@ const SettingsSlider = memo(({
   // Format displayed value based on step size
   const displayValue = Number(value).toFixed(step < 1 ? 2 : 0);
   
-  // Apply size modifier CSS class
-  const sizeClass = size === 'small' 
-    ? styles.small 
-    : size === 'large' 
-      ? styles.large 
-      : '';
+  // Build class list for SettingsSlider
+  const sliderClasses = [commonStyles.controlContainer, styles.SettingsSlider];
+  if (disabled) sliderClasses.push(styles['SettingsSlider--disabled']);
+  if (size === 'small') sliderClasses.push(styles['SettingsSlider--small']);
+  else if (size === 'large') sliderClasses.push(styles['SettingsSlider--large']);
   
   // Handle slider change
   const handleSliderChange = e => {
@@ -92,14 +92,14 @@ const SettingsSlider = memo(({
   };
   
   return (
-    <div className={`${styles.sliderContainer} ${disabled ? styles.disabled : ''} ${sizeClass}`}>
-      <div className={styles.labelContainer}>
-        <label htmlFor={id} className={styles.label}>
+    <div className={sliderClasses.join(' ')}>
+      <div className={commonStyles.controlHeader}>
+        <label htmlFor={id} className={commonStyles.controlLabel}>
           {label}
           {tooltip && (
-            <span className={styles.tooltipWrapper}>
-              <InfoIcon className={styles.infoIcon} />
-              <span className={styles.tooltip}>{tooltip}</span>
+            <span className={styles.SettingsSlider__tooltipWrapper}>
+              <InfoIcon className={styles.SettingsSlider__infoIcon} />
+              <span className={styles.SettingsSlider__tooltip}>{tooltip}</span>
             </span>
           )}
         </label>
@@ -107,7 +107,7 @@ const SettingsSlider = memo(({
         {allowDirectInput ? (
           <input
             type="number"
-            className={styles.numberInput}
+            className={styles.SettingsSlider__numberInput}
             value={inputValue}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
@@ -119,20 +119,20 @@ const SettingsSlider = memo(({
             aria-label={`${label} value`}
           />
         ) : (
-          <span className={styles.value}>{displayValue}</span>
+          <span className={styles.SettingsSlider__value}>{displayValue}</span>
         )}
       </div>
       
-      <div className={styles.sliderTrack}>
+      <div className={styles.SettingsSlider__track}>
         <div 
-          className={styles.sliderFill} 
+          className={styles.SettingsSlider__fill} 
           style={{ width: `${percentage}%` }}
         />
         
         <input
           id={id}
           type="range"
-          className={styles.slider}
+          className={styles.SettingsSlider__slider}
           value={value}
           min={min}
           max={max}

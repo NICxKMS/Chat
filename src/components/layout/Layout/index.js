@@ -1,27 +1,20 @@
 import { lazy, useState, useCallback, Suspense } from 'react';
 import { useIsDesktop } from '../../../hooks/useMediaQuery';
 import { useModel } from '../../../contexts/ModelContext';
-import { useChat } from '../../../contexts/ChatContext';
-// Import useApi if needed for apiUrl, but not for status
-// import { useApi } from '../../../contexts/ApiContext'; 
 import { useAuth } from '../../../contexts/AuthContext'; // Import useAuth
 import { useTheme } from '../../../contexts/ThemeContext'; // Import ThemeContext
-import { GearIcon, PlusIcon, TrashIcon, DownloadIcon } from '@primer/octicons-react';
+import { GearIcon} from '@primer/octicons-react';
 import styles from './Layout.module.css';
 // Import icons using the correct paths
 // Import only the specific icons needed
-// const ApiStatus = lazy(() => import('../../common/ApiStatus')); // Removed
-// Assuming lazyLoad utility path
+
 
 // Lazily loaded components - Prefetch hints removed for manual loading
 const Sidebar = lazy(() => import(/* webpackChunkName: "layout-sidebar" */ '../Sidebar'));
 const MainContent = lazy(() => import(/* webpackPreload: true, webpackChunkName: "layout-main" */ '../MainContent'));
-// import ModelSelectorButton from '../../models/ModelSelectorButton'; // Remove this import
 const ModelDropdown = lazy(() => import(/* webpackChunkName: "models-dropdown" */ '../../models/ModelDropdown'));
 const Spinner = lazy(() => import(/* webpackChunkName: "common-spinner" */ '../../common/Spinner'));
 const ThemeToggle = lazy(() => import(/* webpackChunkName: "common-theme" */ '../../common/ThemeToggle'));
-// Remove ApiStatus import
-// const ApiStatus = lazy(() => import('../../common/ApiStatus')); // Removed
 const SettingsPanel = lazy(() => import(/* webpackChunkName: "settings-panel" */ '../../settings/SettingsPanel'));
 const SidebarToggle = lazy(() => import(/* webpackChunkName: "layout-sidebar-toggle" */ '../SidebarToggle'));
 const MoreActions = lazy(() => import(/* webpackChunkName: "common-more-actions" */ '../../common/MoreActions'));
@@ -45,7 +38,6 @@ const Layout = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // State for settings panel
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false); // State for model selector visibility
   const { selectedModel, isLoadingModels } = useModel(); // Get model data
-  const { chatHistory, resetChat, downloadChatHistory } = useChat();
   const { currentUser, isAuthenticated, login, logout, loading: authLoading } = useAuth(); // Get auth context
   const { theme, toggleTheme } = useTheme(); // Get theme context
 
@@ -66,91 +58,19 @@ const Layout = () => {
     setIsModelSelectorOpen(prev => !prev);
   }, []);
 
-  // Implement new chat functionality
-  const handleNewChat = useCallback(() => {
-    // Close sidebar on mobile after starting new chat
-    if (!isDesktop) {
-      setIsSidebarOpen(false);
-    }
-    
-    // Clear chat history if there are messages
-    if (chatHistory.length > 0) {
-      resetChat();
-    }
-  }, [isDesktop, chatHistory.length, resetChat]);
-
-  // Implement reset chat functionality
-  const handleResetChat = useCallback(() => {
-    if (chatHistory.length === 0) return;
-    
-    if (window.confirm('Are you sure you want to clear the current chat?')) {
-      resetChat();
-      
-      // Show confirmation to the user
-      const notification = document.createElement('div');
-      notification.style.position = 'fixed';
-      notification.style.bottom = '20px';
-      notification.style.left = '50%';
-      notification.style.transform = 'translateX(-50%)';
-      notification.style.backgroundColor = 'var(--hover)';
-      notification.style.color = 'var(--text)';
-      notification.style.padding = '10px 20px';
-      notification.style.borderRadius = '8px';
-      notification.style.zIndex = '9999';
-      notification.textContent = 'Chat has been cleared';
-      document.body.appendChild(notification);
-      
-      // Remove notification after 3 seconds
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 3000);
-    }
-  }, [chatHistory.length, resetChat]);
-
-  // Implement download chat functionality
-  const handleDownloadChat = useCallback(() => {
-    if (chatHistory.length === 0) return;
-    try {
-      downloadChatHistory();
-      
-      // Show confirmation to the user (especially useful for mobile)
-      const notification = document.createElement('div');
-      notification.style.position = 'fixed';
-      notification.style.bottom = '20px';
-      notification.style.left = '50%';
-      notification.style.transform = 'translateX(-50%)';
-      notification.style.backgroundColor = 'var(--hover)';
-      notification.style.color = 'var(--text)';
-      notification.style.padding = '10px 20px';
-      notification.style.borderRadius = '8px';
-      notification.style.zIndex = '9999';
-      notification.textContent = 'Chat downloaded successfully';
-      document.body.appendChild(notification);
-      
-      // Remove notification after 3 seconds
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 3000);
-    } catch (error) {
-      console.error("Error downloading chat:", error);
-      alert("Failed to download chat. Please try again.");
-    }
-  }, [chatHistory.length, downloadChatHistory]);
-  
   // Determine layout classes based on state and viewport
   const isSidebarEffectivelyHidden = isDesktop && !isSidebarOpen;
   const layoutClasses = [
-    styles.layout,
-    isSidebarEffectivelyHidden ? styles.sidebarCompact : '', // Handles transform
-    !isDesktop && isSidebarOpen ? styles.sidebarOpenMobile : '', // Mobile slide-in
-    isSidebarEffectivelyHidden ? styles.sidebarHidden : '' // Controls floating icon visibility
+    styles.Layout,
+    isSidebarEffectivelyHidden ? styles['Layout--sidebarCompact'] : '', // Handles transform
+    !isDesktop && isSidebarOpen ? styles['Layout--sidebarOpenMobile'] : '', // Mobile slide-in
   ].filter(Boolean).join(' ');
 
   return (
     <div className={layoutClasses}>
       {/* Mobile Actions Container (Top Right) */}
-      <div className={styles.mobileActionsContainer}>
-        <div className={styles.mobileActions}>
+      <div className={styles.Layout__mobileActionsContainer}>
+        <div className={styles.Layout__mobileActions}>
           {/* Theme Toggle */}
           <Suspense fallback={null}>
             <ThemeToggle />
@@ -170,7 +90,7 @@ const Layout = () => {
           
           {/* Settings Button */}
           <button 
-            className={styles.mobileActionButton} 
+            className={styles.Layout__mobileActionButton} 
             onClick={toggleSettings}
             aria-label="Settings"
             title="Settings"
@@ -178,27 +98,11 @@ const Layout = () => {
             <GearIcon size={20} />
           </button>
           
-          {/* More Actions Menu */}
+          {/* More Actions Menu - Now pass only additional actions */}
           <MoreActions 
-            actions={[
-              // Always included actions
-              {
-                icon: <PlusIcon size={16} />,
-                label: 'New Chat',
-                onClick: handleNewChat
-              },
-              {
-                icon: <TrashIcon size={16} />,
-                label: 'Reset Chat',
-                onClick: handleResetChat
-              },
-              {
-                icon: <DownloadIcon size={16} />,
-                label: 'Download Chat',
-                onClick: handleDownloadChat
-              },
-              // Mobile-specific actions (will only be visible on mobile)
-              ...(isDesktop ? [] : [
+            triggerButtonClassName={styles.Layout__mobileActionButton}
+            actions={ // Pass only the mobile-specific actions now
+              isDesktop ? [] : [
                 // Theme toggle action
                 {
                   icon: theme === 'dark' ? <span style={{ fontSize: '16px' }}>☀️</span> : <span style={{ fontSize: '16px' }}>🌙</span>,
@@ -217,48 +121,48 @@ const Layout = () => {
                   label: isAuthenticated ? `Logout (${currentUser?.displayName || currentUser?.email || 'User'})` : 'Login',
                   onClick: isAuthenticated ? logout : login
                 }
-              ])
-            ]}
+              ]
+            }
           />
         </div>
       </div>
 
-      {/* Sidebar Toggle */}
-      <Suspense fallback={<LoadingFallback />}>
-        <SidebarToggle
-          isOpen={isSidebarOpen}
-          onToggle={toggleSidebar}
-        />
-      </Suspense>
-
-      {/* Conditionally render the ModelDropdown as a modal/overlay */}
-      {isModelSelectorOpen && (
-        <Suspense fallback={
-          <div className={styles.modalOverlay}>
-            <Spinner size="large" />
-          </div>
-        }>
-           <div className={styles.modalOverlay} onClick={toggleModelSelector}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-              <ModelDropdown /> 
-            </div>
-          </div>
+      {/* Sidebar Toggle (floating) - only when sidebar is closed */}
+      {!isSidebarOpen && (
+        <Suspense fallback={<LoadingFallback />}>
+          <SidebarToggle
+            isOpen={isSidebarOpen}
+            onToggle={toggleSidebar}
+          />
         </Suspense>
       )}
 
+      {/* Conditionally render the ModelDropdown as a modal/overlay */}
+      {isModelSelectorOpen && (
+        <div className={styles.Layout__modalOverlay} onClick={toggleModelSelector}>
+          <div className={styles.Layout__modalContent} onClick={(e) => e.stopPropagation()}>
+            <Suspense fallback={<LoadingFallback />}>
+              <ModelDropdown onClose={toggleModelSelector} /> 
+            </Suspense>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar container */}
-      <div className={styles.sidebarContainer}>
-        <Suspense fallback={<div className={styles.sidebarPlaceholder} />}>
-          <Sidebar 
-            onNewChat={handleNewChat}
-            onToggleSettings={toggleSettings}
-          />
-        </Suspense>
-      </div>
+      {isSidebarOpen && (
+        <div className={styles.Layout__sidebarContainer}>
+          <Suspense fallback={<div className={styles.Layout__sidebarPlaceholder} />}>
+            <Sidebar 
+              onToggleSettings={toggleSettings}
+              onToggleSidebar={toggleSidebar}
+            />
+          </Suspense>
+        </div>
+      )}
       
       {/* Main content container */}
-      <div className={styles.mainContentContainer}>
-        <Suspense fallback={<div className={styles.contentPlaceholder} />}>
+      <div className={styles.Layout__mainContentContainer}>
+        <Suspense fallback={<div className={styles.Layout__contentPlaceholder} />}>
           <MainContent 
             isSidebarOpen={isSidebarOpen} 
             toggleSidebar={toggleSidebar} 
@@ -268,10 +172,7 @@ const Layout = () => {
             isLoadingModels={isLoadingModels}
             toggleModelSelector={toggleModelSelector}
             isModelSelectorOpen={isModelSelectorOpen}
-            onNewChat={handleNewChat}
             onToggleSettings={toggleSettings}
-            onResetChat={handleResetChat}
-            onDownloadChat={handleDownloadChat}
           />
         </Suspense>
       </div>
@@ -279,7 +180,7 @@ const Layout = () => {
       {/* Mobile overlay */}
       {!isDesktop && isSidebarOpen && (
         <div 
-          className={`${styles.overlay} ${styles.overlayVisible}`}
+          className={`${styles.Layout__overlay} ${styles['Layout__overlay--visible']}`}
           onClick={toggleSidebar}
           aria-hidden="true"
         />

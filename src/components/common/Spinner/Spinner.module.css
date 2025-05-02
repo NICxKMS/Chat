@@ -1,34 +1,34 @@
-.spinnerContainer {
+.Spinner {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px;
+  padding: var(--space-xs);
 }
 
-.spinner {
+.Spinner__loader {
   position: relative;
   border-radius: 50%;
 }
 
-.spinner::before,
-.spinner::after {
+.Spinner__loader::before,
+.Spinner__loader::after {
   content: '';
   position: absolute;
   border-radius: 50%;
 }
 
-.spinner::before {
+.Spinner__loader::before {
   width: 100%;
   height: 100%;
   background: conic-gradient(
     transparent 0%,
-    rgba(var(--primary-rgb), 0.1) 50%,
+    rgb(var(--primary-rgb), 0.1) 50%,
     transparent 100%
   );
   animation: rotate 1.5s linear infinite;
 }
 
-.spinner::after {
+.Spinner__loader::after {
   width: 85%;
   height: 85%;
   top: 7.5%;
@@ -38,38 +38,38 @@
 }
 
 /* Spinner sizes */
-.small {
-  width: 24px;
-  height: 24px;
+.Spinner--small {
+  width: var(--space-xl);
+  height: var(--space-xl);
 }
 
-.small .spinner {
-  width: 24px;
-  height: 24px;
+.Spinner--small .Spinner__loader {
+  width: var(--space-xl);
+  height: var(--space-xl);
 }
 
-.medium {
-  width: 48px;
-  height: 48px;
+.Spinner--medium {
+  width: var(--space-xxxxl);
+  height: var(--space-xxxxl);
 }
 
-.medium .spinner {
-  width: 48px;
-  height: 48px;
+.Spinner--medium .Spinner__loader {
+  width: var(--space-xxxxl);
+  height: var(--space-xxxxl);
 }
 
-.large {
-  width: 72px;
-  height: 72px;
+.Spinner--large {
+  width: calc(var(--space-xxxxl) * 1.5);
+  height: calc(var(--space-xxxxl) * 1.5);
 }
 
-.large .spinner {
-  width: 72px;
-  height: 72px;
+.Spinner--large .Spinner__loader {
+  width: calc(var(--space-xxxxl) * 1.5);
+  height: calc(var(--space-xxxxl) * 1.5);
 }
 
 /* Gradient spinner variant */
-.gradient::before {
+.Spinner--gradient::before {
   background: conic-gradient(
     transparent 0%,
     var(--gradient-primary) 50%,
@@ -79,7 +79,7 @@
 }
 
 /* Dark mode adjustments */
-body.dark-mode .spinner::before {
+body.dark-mode .Spinner__loader::before {
   opacity: 0.8;
 }
 
@@ -87,6 +87,7 @@ body.dark-mode .spinner::before {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

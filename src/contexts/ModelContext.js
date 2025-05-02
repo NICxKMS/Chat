@@ -1,10 +1,13 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useApi } from './ApiContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useAuth } from './AuthContext';
+import { useCacheToggle } from '../hooks/useCacheToggle';
+import { useToast } from './ToastContext';
+import { useLoading } from './LoadingContext';
 
-// Cache expiry time in milliseconds (5 minutes)
-const CACHE_EXPIRY_TIME = 5*60 * 60 * 1000;
+// Cache expiry time in milliseconds (5 days)
+const CACHE_EXPIRY_TIME = 5 * 24 * 60 * 60 * 1000;
 
 // Create separate contexts for models and filtering
 const ModelContext = createContext();
@@ -30,17 +33,18 @@ export const useModelFilter = () => {
 
 // Model provider component
 export const ModelProvider = ({ children }) => {
+  const { cacheEnabled } = useCacheToggle();
   const { apiUrl } = useApi();
   const { idToken } = useAuth();
+  const { showToast } = useToast();
   
   // State for model data
   const [allModels, setAllModels] = useState([]);
   const [processedModels, setProcessedModels] = useState({});
   const [experimentalModels, setExperimentalModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useLocalStorage('selectedModel', null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Filter state - moved to separate context
   const [showExperimental, setShowExperimental] = useLocalStorage('showExperimental', false);
@@ -52,6 +56,13 @@ export const ModelProvider = ({ children }) => {
       'Embedding': true
     }
   });
+  
+  // Sync with global loading context
+  const [, startModelsLoading, stopModelsLoading] = useLoading('models');
+  useEffect(() => {
+    if (isLoading) startModelsLoading();
+    else stopModelsLoading();
+  }, [isLoading, startModelsLoading, stopModelsLoading]);
   
   // Check if cache is valid
   const isCacheValid = useCallback((cache) => {
@@ -119,33 +130,24 @@ export const ModelProvider = ({ children }) => {
     }
   }, [selectedModel, setSelectedModel]);
   
-  // Fetch models from API
-  const fetchModels = useCallback(async () => {
+  // Fetch models from API, optionally using auth token or override token
+  const fetchModels = useCallback(async (authRequired = false, overrideToken = null) => {
     setIsLoading(true);
     setError(null);
     
-    console.log("Fetching models from API...");
+    console.log(`Fetching models from API (auth: ${authRequired})...`);
     try {
-      // For initial load, fetch without auth to avoid Firebase initialization
-      // On subsequent loads, use auth token if available
-      const headers = {
-        'Accept': 'application/json'
-      };
-
-      // Only add authorization header if not initial load and token exists
-      if (!isInitialLoad && idToken) {
-        headers['Authorization'] = `Bearer ${idToken}`;
+      const headers = { 'Accept': 'application/json' };
+      if (authRequired) {
+        // Prefer overrideToken (cached) over current idToken
+        const tokenToUse = overrideToken || idToken;
+        if (tokenToUse) {
+          headers['Authorization'] = `Bearer ${tokenToUse}`;
+        }
       }
-
-      // Construct URL safely
       const modelsUrl = new URL('/api/models/classified', apiUrl).toString();
       const response = await fetch(modelsUrl, { headers });
       console.log('Models response:', response);
-      
-      // After first successful fetch, mark initial load complete
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
-      }
       
       if (!response.ok) {
         let errorMsg = `Error fetching models: ${response.status}`;
@@ -162,21 +164,32 @@ export const ModelProvider = ({ children }) => {
         if (msg.error) {
           console.error('[ModelContext] Worker error:', msg.error);
           setError(msg.error);
+          showToast({ type: 'error', message: msg.error });
         } else {
           const {
             allModels: fetchedAllModels,
             processedModels: fetchedProcessedModels,
             experimentalModels: fetchedExperimentalModels
           } = msg;
-          setAllModels(fetchedAllModels);
-          setProcessedModels(fetchedProcessedModels);
-          setExperimentalModels(fetchedExperimentalModels);
-          // Cache the processed results
-          cacheModels({
-            allModels: fetchedAllModels,
-            processedModels: fetchedProcessedModels,
-            experimentalModels: fetchedExperimentalModels
-          });
+          if (cacheEnabled) {
+            const rawPrev = localStorage.getItem('modelDropdownCache');
+            let prevCache;
+            try { prevCache = JSON.parse(rawPrev); } catch { prevCache = null; }
+            const changed = !prevCache ||
+              JSON.stringify(prevCache.allModels) !== JSON.stringify(fetchedAllModels) ||
+              JSON.stringify(prevCache.processedModels) !== JSON.stringify(fetchedProcessedModels) ||
+              JSON.stringify(prevCache.experimentalModels) !== JSON.stringify(fetchedExperimentalModels);
+            if (changed) {
+              setAllModels(fetchedAllModels);
+              setProcessedModels(fetchedProcessedModels);
+              setExperimentalModels(fetchedExperimentalModels);
+              cacheModels({ allModels: fetchedAllModels, processedModels: fetchedProcessedModels, experimentalModels: fetchedExperimentalModels });
+            }
+          } else {
+            setAllModels(fetchedAllModels);
+            setProcessedModels(fetchedProcessedModels);
+            setExperimentalModels(fetchedExperimentalModels);
+          }
           // Initial model selection moved to a separate useEffect
         }
         setIsLoading(false);
@@ -185,27 +198,59 @@ export const ModelProvider = ({ children }) => {
       worker.onerror = (err) => {
         console.error('[ModelContext] Worker unexpected error:', err);
         setError(err.message);
+        showToast({ type: 'error', message: err.message });
         setIsLoading(false);
         worker.terminate();
       };
     } catch (err) {
       console.error('Failed to fetch or process models:', err);
       setError(err.message || 'Failed to load model data');
+      showToast({ type: 'error', message: err.message || 'Failed to load model data' });
       // Attempt to load from potentially expired cache as a last resort?
     }
-  }, [
-    apiUrl,
-    cacheModels,
-    idToken,
-    isInitialLoad
-  ]);
+  }, [apiUrl, cacheModels, idToken, cacheEnabled, showToast]);
   
-  // Fetch models on initial mount
+  // Initial fetch once on mount
+  const initialFetchDoneRef = useRef(false);
+  // track if we've already fetched models with authentication
+  const didAuthFetchRef = useRef(false);
+
   useEffect(() => {
-    fetchModels();
-    // Run only once on mount, or when fetchModels function reference changes
-    // (which it shouldn't unless dependencies like apiUrl change)
-  }, [fetchModels]);
+    if (!initialFetchDoneRef.current) {
+      if (cacheEnabled) {
+        const rawCache = localStorage.getItem('modelDropdownCache');
+        let parsedCache;
+        try { parsedCache = JSON.parse(rawCache); } catch { parsedCache = null; }
+        if (parsedCache && window.isCacheValid(parsedCache)) {
+          setAllModels(parsedCache.allModels);
+          setProcessedModels(parsedCache.processedModels);
+          setExperimentalModels(parsedCache.experimentalModels);
+          setIsLoading(false);
+        }
+      }
+      let cachedToken = null;
+      try { cachedToken = localStorage.getItem('idToken'); } catch {}
+      if (cachedToken) {
+        // initial authenticated fetch
+        didAuthFetchRef.current = true;
+        fetchModels(true, cachedToken);
+      } else {
+        // initial unauthenticated fetch
+        fetchModels(false);
+      }
+      initialFetchDoneRef.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // After login, fetch authenticated models
+  useEffect(() => {
+    // only fetch once after obtaining idToken if not already done
+    if (initialFetchDoneRef.current && idToken && !didAuthFetchRef.current) {
+      didAuthFetchRef.current = true;
+      fetchModels(true);
+    }
+  }, [idToken, fetchModels]);
   
   // Set initial model after models are loaded
   useEffect(() => {
@@ -213,7 +258,7 @@ export const ModelProvider = ({ children }) => {
     if (!selectedModel && allModels.length > 0) {
       setSelectedModel(allModels[0]);
     }
-  }, [allModels, selectedModel]);
+  }, [allModels, selectedModel, setSelectedModel]);
   
   // Create toggleExperimentalModels callback at the top level
   const toggleExperimentalModels = useCallback(() => {

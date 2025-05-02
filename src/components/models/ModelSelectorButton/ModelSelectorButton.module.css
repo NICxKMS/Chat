@@ -7,8 +7,8 @@
   --btn-inner-bg: #f8f9fa;   /* Very Light Grey */
   --btn-text: #343a40;       /* Dark Grey */
   --btn-hover-text: #212529; /* Near Black */
-  --btn-glow-color: rgba(64, 224, 208, 0.3); /* Turquoise glow */
-  --btn-focus-ring: rgba(64, 224, 208, 0.6);
+  --btn-glow-color: rgb(64 224 208 / 30%); /* Turquoise glow */
+  --btn-focus-ring: rgb(64 224 208 / 60%);
   --btn-disabled-bg: #e9ecef;
   --btn-disabled-text: #adb5bd;
   --btn-active-inner-bg: #e9ecef;
@@ -26,18 +26,18 @@
     --btn-grad-start: #5B42F3; /* Purple */
     --btn-grad-mid: #AF40FF;   /* Violet */
     --btn-grad-end: #00DDEB;   /* Cyan */
-    --btn-inner-bg: rgb(25, 28, 58); /* Dark Blue/Charcoal */
+    --btn-inner-bg: rgb(25 28 58); /* Dark Blue/Charcoal */
     --btn-text: #e9ecef;       /* Light Grey */
-    --btn-hover-text: #ffffff; /* White */
-    --btn-glow-color: rgba(175, 64, 255, 0.3); /* Violet glow */
-    --btn-focus-ring: rgba(175, 64, 255, 0.6);
+    --btn-hover-text: #fff; /* White */
+    --btn-glow-color: rgb(175 64 255 / 30%); /* Violet glow */
+    --btn-focus-ring: rgb(175 64 255 / 60%);
     --btn-disabled-bg: #495057;
     --btn-disabled-text: #6c757d;
-    --btn-active-inner-bg: rgba(25, 28, 58, 0.9);
+    --btn-active-inner-bg: rgb(25 28 58 / 90%);
   }
 }
 
-.modelSelectorButton {
+.ModelSelectorButton {
   display: inline-flex;
   align-items: center;
   background-image: linear-gradient(144deg, 
@@ -59,21 +59,21 @@
   touch-action: manipulation;
   white-space: nowrap;
   cursor: pointer;
-  transition: box-shadow var(--theme-transition-duration) var(--theme-transition-timing),
-              background-image var(--theme-transition-duration) var(--theme-transition-timing);
-  min-width: 160px;
-  max-width: 350px;
+  transition: box-shadow var(--theme-transition-duration, 0.3s) var(--theme-transition-timing, ease),
+              background-image var(--theme-transition-duration, 0.3s) var(--theme-transition-timing, ease);
+  width: 100%;
+  text-align: left;
 }
 
-.modelSelectorButton:active,
-.modelSelectorButton:hover {
+.ModelSelectorButton:active,
+.ModelSelectorButton:hover {
   outline: 0;
 }
 
-.innerContent {
+.ModelSelectorButton__innerContent {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   background-color: var(--btn-inner-bg);
   color: var(--btn-text);
   padding: 0.7rem 1.2rem;
@@ -81,20 +81,20 @@
   width: 100%;
   height: 100%;
   transition: background-color 0.3s ease, 
-              color var(--theme-transition-duration) var(--theme-transition-timing);
+              color var(--theme-transition-duration, 0.3s) var(--theme-transition-timing, ease);
 }
 
-.modelSelectorButton:hover:not(:disabled) .innerContent {
+.ModelSelectorButton:hover:not(:disabled) .ModelSelectorButton__innerContent {
   background: none;
   color: var(--btn-hover-text);
 }
 
-.modelSelectorButton:active:not(:disabled) .innerContent {
+.ModelSelectorButton:active:not(:disabled) .ModelSelectorButton__innerContent {
   background-color: var(--btn-active-inner-bg);
   transition-duration: 50ms;
 }
 
-.modelSelectorButton:disabled {
+.ModelSelectorButton:disabled {
   background-image: none;
   background-color: var(--btn-disabled-bg);
   box-shadow: none;
@@ -102,35 +102,46 @@
   opacity: 0.6;
 }
 
-.modelSelectorButton:disabled .innerContent {
+.ModelSelectorButton:disabled .ModelSelectorButton__innerContent {
   background-color: transparent;
   color: var(--btn-disabled-text);
 }
 
-.buttonText {
+.ModelSelectorButton__text {
   margin-right: 0.6rem;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%; 
-  max-width: 280px;
-  min-height: 1.2em;
-  display: block;
-  transition: opacity 0.3s ease-in-out;
+  text-align: center;
+  flex: 1;
+}
+
+.ModelSelectorButton__icon {
+  opacity: 0.8;
+  transition: opacity 0.2s ease,
+              color var(--theme-transition-duration, 0.3s) var(--theme-transition-timing, ease);
+  color: currentColor;
+  margin-left: auto;
+}
+
+.ModelSelectorButton:hover:not(:disabled) .ModelSelectorButton__icon {
+  opacity: 1;
+}
+
+.ModelSelectorButton:focus-visible {
+  box-shadow: var(--btn-glow-color) 0 10px 20px -5px, 0 0 0 3px var(--btn-focus-ring);
+}
+
+.ModelSelectorButton__spinner {
+  margin: 0 auto;
 }
 
 /* Animation for provider display */
-.showProvider {
+.ModelSelectorButton__text--showProvider {
   animation: fadeIn 0.5s ease-in-out;
 }
 
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
 /* Scrolling text animation for overflow */
-.scrollText {
+.ModelSelectorButton__text--scrollText {
   animation: scrollText 6s linear infinite;
   display: inline-block;
   padding-right: 1rem;
@@ -140,58 +151,46 @@
   0% {
     transform: translateX(0%);
   }
+
   10% {
     transform: translateX(0%);
   }
+
   45% {
     transform: translateX(calc(-100% + 150px));
   }
+
   55% {
     transform: translateX(calc(-100% + 150px));
   }
+
   90% { 
     transform: translateX(0%);
   }
+
   100% {
     transform: translateX(0%);
   }
 }
 
-.buttonIcon {
-  opacity: 0.8;
-  transition: opacity 0.2s ease,
-              color var(--theme-transition-duration) var(--theme-transition-timing);
-  color: currentColor;
-  flex-shrink: 0;
-}
-
-.modelSelectorButton:hover:not(:disabled) .buttonIcon {
-  opacity: 1;
-}
-
-.modelSelectorButton:focus-visible {
-  box-shadow: var(--btn-glow-color) 0 10px 20px -5px, 0 0 0 3px var(--btn-focus-ring);
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* Optional: Responsive adjustments */
-@media (max-width: 768px) {
-  .modelSelectorButton {
+@media (width <= 600px) {
+  .ModelSelectorButton {
     font-size: 0.8rem;
     min-width: 130px;
     max-width: 250px;
   }
   
-  .innerContent {
+  .ModelSelectorButton__innerContent {
     padding: 0.6rem 0.8rem; /* Reduce padding */
   }
   
-  .buttonText {
+  .ModelSelectorButton__text {
     max-width: 180px;
   }
 }
-
-/* @media (min-width: 768px) {
-  .modelSelectorButton {
-    font-size: 1rem;
-  }
-} */ 

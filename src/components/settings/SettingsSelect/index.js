@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import styles from './SettingsSelect.module.css';
+import commonStyles from '../common/ControlStyles.module.css';
 
 const SettingsSelect = ({
   id,
@@ -11,6 +12,9 @@ const SettingsSelect = ({
   disabled = false,
   tooltip
 }) => {
+  // Build class list for SettingsSelect
+  const selectClasses = [commonStyles.controlContainer, styles.SettingsSelect];
+  if (disabled) selectClasses.push(styles['SettingsSelect--disabled']);
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -22,18 +26,18 @@ const SettingsSelect = ({
   // Generate a unique ID for the label to use with aria-labelledby
   const labelId = `${id}-label`;
   
-  const toggleDropdown = () => {
+  const toggleDropdown = useCallback(() => {
     if (!disabled) {
-      setIsOpen(!isOpen);
+      setIsOpen(open => !open);
     }
-  };
+  }, [disabled]);
 
-  const handleOptionSelect = (optionValue) => {
+  const handleOptionSelect = useCallback((optionValue) => {
     onChange(optionValue);
     setIsOpen(false);
-  };
+  }, [onChange]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (disabled) return;
     
     switch (e.key) {
@@ -64,7 +68,7 @@ const SettingsSelect = ({
       default:
         break;
     }
-  };
+  }, [disabled, isOpen, options, value, toggleDropdown, onChange]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -86,56 +90,64 @@ const SettingsSelect = ({
     };
   }, [isOpen]);
 
-  return (
-    <div className={`${styles.selectContainer} ${disabled ? styles.disabled : ''}`}>
-      <label 
-        htmlFor={id} 
-        className={styles.label} 
-        title={tooltip || ''}
-        id={labelId}
-      >
-        {label}
-      </label>
-      
+  // Memoize the rendered options list
+  const renderedOptions = useMemo(() => options.map(option => {
+    const isSelected = option.value === value;
+    return (
       <div 
-        ref={selectRef}
-        className={`${styles.select} ${isOpen ? styles.open : ''}`}
-        onClick={toggleDropdown}
-        onKeyDown={handleKeyDown}
-        tabIndex={disabled ? -1 : 0}
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-controls={`${id}-listbox`}
-        aria-haspopup="listbox"
-        aria-disabled={disabled}
-        aria-labelledby={labelId}
-        id={id}
+        key={option.value}
+        className={`${styles.SettingsSelect__option} ${isSelected ? styles['SettingsSelect__option--selected'] : ''}`}
+        onClick={() => handleOptionSelect(option.value)}
+        role="option"
+        aria-selected={isSelected}
       >
-        <div className={styles.selectedValue}>
-          {displayText}
+        {option.label}
+      </div>
+    );
+  }), [options, value, handleOptionSelect]);
+
+  return (
+    <div className={selectClasses.join(' ')}> 
+      <div className={commonStyles.controlHeader}>
+        <label 
+          htmlFor={id} 
+          className={commonStyles.controlLabel}
+          title={tooltip || ''}
+          id={labelId}
+        >
+          {label}
+        </label>
+
+        <div 
+          ref={selectRef}
+          className={`${styles.SettingsSelect__select} ${isOpen ? styles['SettingsSelect--open'] : ''} ${styles.selectElement}`}
+          onClick={toggleDropdown}
+          onKeyDown={handleKeyDown}
+          tabIndex={disabled ? -1 : 0}
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-listbox`}
+          aria-haspopup="listbox"
+          aria-disabled={disabled}
+          aria-labelledby={labelId}
+          id={id}
+        >
+          <div className={styles.SettingsSelect__selectedValue}>
+            {displayText}
+          </div>
+          <div className={`${styles.SettingsSelect__arrow} ${styles.selectIcon}`} />
         </div>
-        <div className={styles.arrow} />
       </div>
       
       {isOpen && !disabled && (
         <div 
           ref={dropdownRef}
-          className={styles.dropdown}
+          className={`${styles.SettingsSelect__dropdown} animation-fade-in`}
           role="listbox"
           id={`${id}-listbox`}
           aria-labelledby={id}
         >
-          {options.map((option) => (
-            <div 
-              key={option.value}
-              className={`${styles.option} ${option.value === value ? styles.selected : ''}`}
-              onClick={() => handleOptionSelect(option.value)}
-              role="option"
-              aria-selected={option.value === value}
-            >
-              {option.label}
-            </div>
-          ))}
+          {renderedOptions}
         </div>
       )}
     </div>

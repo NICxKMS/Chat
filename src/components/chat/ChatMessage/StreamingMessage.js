@@ -76,6 +76,7 @@ const StreamingMessage = ({ content, isStreaming }) => {
         </div>
         <SyntaxHighlighter
           style={syntaxTheme}
+          customStyle={{ background: 'transparent' }}
           language={language}
           PreTag="div" // Use div instead of pre, SyntaxHighlighter wraps in its own pre
           className={styles.pre}
@@ -99,7 +100,7 @@ const StreamingMessage = ({ content, isStreaming }) => {
   }), [CodeBlock]); // CodeBlock is the dependency
 
   // Apply streaming class based on the passed-in prop
-  const markdownClassName = `${styles.markdown} ${styles.streamingContent} ${isStreaming ? styles.streaming : ''}`;
+  const markdownClassName = `${styles.markdown} ${styles.ChatMessage__streamingContent} ${isStreaming ? styles['ChatMessage__streamingContent--streaming'] : ''}`;
 
   // Use a zero-width space for this purpose.
   const actualContent = typeof content === 'string' ? content : String(content || '');

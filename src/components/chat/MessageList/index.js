@@ -1,9 +1,11 @@
-import { forwardRef, useState, useMemo, memo } from 'react';
+import { forwardRef, useState, useMemo, memo, useEffect } from 'react';
 import styles from './MessageList.module.css';
-import { useChat } from '../../../contexts/ChatContext';
+import { useChatState } from '../../../contexts/ChatStateContext';
 import ChatMessage from '../ChatMessage';
 import ImageOverlay from '../../common/ImageOverlay';
 import PropTypes from 'prop-types';
+import { processMessageContent } from '../../../utils/messageHelpers';
+import { useProfilePicture } from '../../../hooks/useProfilePicture';
 
 /**
  * Simple message list without virtualization
@@ -14,8 +16,41 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element} - Rendered component
  */
 const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
-  const { isWaitingForResponse } = useChat();
+  const { isWaitingForResponse } = useChatState();
+  // Local state for dynamic auth values
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  // Use hook to fetch and cache avatar Data URL
+  const { profilePicture: cachedAvatar } = useProfilePicture(avatarUrl);
+  const [idToken, setIdToken] = useState(() => localStorage.getItem('idToken'));
+
   const [overlayImageSrc, setOverlayImageSrc] = useState(null);
+
+  // Dynamically import Firebase auth only if a token is already cached
+  useEffect(() => {
+    if (!idToken) return;
+    let unsubscribe;
+    (async () => {
+      const { getFirebaseAuth } = await import('../../../firebaseConfig');
+      const { onAuthStateChanged } = await import('firebase/auth');
+      const auth = getFirebaseAuth();
+      if (!auth) return;
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          setAvatarUrl(user.photoURL || null);
+          try {
+            const token = await user.getIdToken();
+            setIdToken(token);
+          } catch {
+            setIdToken(null);
+          }
+        } else {
+          setAvatarUrl(null);
+          setIdToken(null);
+        }
+      });
+    })();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [idToken]);
 
   // Combine regular messages with error content (if any)
   const finalMessages = useMemo(() => {
@@ -23,44 +58,17 @@ const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
     
     // Add error message if any
     if (error) {
+      const errorTimestamp = Date.now();
       result.push({
+        id: errorTimestamp,
         role: 'error',
         content: error,
-        timestamp: Date.now()
+        timestamp: errorTimestamp
       });
     }
     
     return result;
   }, [messages, error]);
-
-  // Process message content to extract images and text in a single pass
-  const processMessageContent = (content) => {
-    if (!content) return { images: [], text: content };
-
-    if (Array.isArray(content)) {
-      const images = [];
-      const texts = [];
-
-      content.forEach(part => {
-        if (part.type === 'image_url') {
-          images.push({
-            url: part.image_url.url,
-            alt: part.image_url.alt || part.alt || null // Support both image_url.alt and top-level alt
-          });
-        }
-        if (part.type === 'text') {
-          texts.push(part.text);
-        }
-      });
-
-      return { 
-        images, 
-        text: texts.join(' ') 
-      };
-    }
-
-    return { images: [], text: content };
-  };
 
   // Handlers for overlay
   const handleImageClick = (src) => {
@@ -74,7 +82,7 @@ const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
   return (
     <>
       <div 
-        className={styles.messageListContainer} 
+        className={styles.MessageList} 
         ref={ref}
         aria-live="polite"
         aria-relevant="additions text"
@@ -96,18 +104,17 @@ const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
             : `${message.role}-${index}`;
           
           return (
-            <div key={messageKey} className={styles.messageRow}>
+            <div key={messageKey} className={styles.MessageList__messageRow}>
               {/* Render images first if it's a user message with images */}
               {message.role === 'user' && images.length > 0 && (
-                <div className={styles.imageContainer}>
+                <div className={styles.MessageList__imageContainer}>
                   {images.map((image, imgIndex) => (
                     <img 
                       key={`${messageKey}-img-${imgIndex}`}
                       src={image.url}
                       alt={image.alt || `Uploaded image ${imgIndex + 1}`}
-                      className={styles.messageImage}
+                      className={`${styles.MessageList__messageImage} ${styles.MessageList__clickableImage}`}
                       onClick={() => handleImageClick(image.url)}
-                      style={{ cursor: 'pointer' }}
                     />
                   ))}
                 </div>
@@ -115,9 +122,11 @@ const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
               {/* Render ChatMessage if there's text content or it's not a user message */}
               {(text || message.role !== 'user') && (
                 <ChatMessage
-                  message={{ ...message, content: text || message.content }}
+                  message={message}
+                  overrideContent={text || undefined}
                   isStreaming={isStreaming}
                   onEditMessage={message.role === 'user' ? onEditMessage : undefined}
+                  avatarUrl={message.role === 'user' && idToken ? (cachedAvatar || avatarUrl) : undefined}
                 />
               )}
             </div>
@@ -126,7 +135,13 @@ const MessageList = forwardRef(({ messages, error, onEditMessage }, ref) => {
       </div>
       
       {/* Render the overlay component */}
-      <ImageOverlay src={overlayImageSrc} onClose={handleCloseOverlay} />
+      {overlayImageSrc && (
+        <ImageOverlay
+          src={overlayImageSrc}
+          alt="Image preview"
+          onClose={handleCloseOverlay}
+        />
+      )}
     </>
   );
 });

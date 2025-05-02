@@ -1,4 +1,5 @@
 import { memo, useMemo, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import styles from './PerformanceMetrics.module.css';
 
 /**
@@ -7,10 +8,9 @@ import styles from './PerformanceMetrics.module.css';
  * @param {Object} props.metrics - Metrics data including token counts and timing
  * @returns {JSX.Element|null} - Rendered component or null if no metrics
  */
-const PerformanceMetrics = memo(({ metrics }) => {
+const PerformanceMetrics = memo(({ metrics = null }) => {
   const { 
     elapsedTime, 
-    tokenCount, 
     tokensPerSecond, 
     isComplete, 
     promptTokens, 
@@ -40,15 +40,12 @@ const PerformanceMetrics = memo(({ metrics }) => {
   
   // Format token count with detailed info when available
   const formattedTokens = useMemo(() => {
-    // If we have detailed token breakdown
+    // Only show completion token count
     if (completionTokens) {
       return `${completionTokens} tokens${isComplete ? '' : '...'}`;
     }
-    
-    // Fallback to basic token count
-    if (!tokenCount) return '';
-    return `${tokenCount} tokens${isComplete ? '' : '...'}`;
-  }, [tokenCount, completionTokens, isComplete]);
+    return '';
+  }, [completionTokens, isComplete]);
   
   // Create tooltip with detailed token info
   const tokenTooltip = useMemo(() => {
@@ -73,36 +70,36 @@ const PerformanceMetrics = memo(({ metrics }) => {
   
   // Only show TPS if we have token count, elapsed time > 0.5s, and calculated TPS
   const showTps = useMemo(() => {
-    return (tokenCount || completionTokens) && elapsedTime > 500 && tokensPerSecond;
-  }, [tokenCount, completionTokens, elapsedTime, tokensPerSecond]);
+    return completionTokens && elapsedTime > 500 && tokensPerSecond;
+  }, [completionTokens, elapsedTime, tokensPerSecond]);
   
   // Skip rendering if no metrics available
-  if (!elapsedTime || (!tokenCount && !completionTokens)) {
+  if (!elapsedTime || !completionTokens) {
     return null;
   }
   
   return (
-    <div className={styles.metrics}>
-      <span className={styles.timeMetric} title="Response time">
-        <ClockIcon className={styles.icon} />
+    <div className={styles.PerformanceMetrics}>
+      <span className={`${styles.PerformanceMetrics__metric} ${styles['PerformanceMetrics__metric--time']}`} title="Response time">
+        <ClockIcon className={styles.PerformanceMetrics__icon} />
         {formattedTime}
       </span>
       
-      <span className={styles.tokenMetric} title={tokenTooltip}>
-        <TokenIcon className={styles.icon} />
+      <span className={`${styles.PerformanceMetrics__metric} ${styles['PerformanceMetrics__metric--tokens']}`} title={tokenTooltip}>
+        <TokenIcon className={styles.PerformanceMetrics__icon} />
         {formattedTokens}
       </span>
       
       {showTps && (
-        <span className={styles.tpsMetric} title="Tokens per second">
-          <SpeedIcon className={styles.icon} />
+        <span className={`${styles.PerformanceMetrics__metric} ${styles['PerformanceMetrics__metric--tps']}`} title="Tokens per second">
+          <SpeedIcon className={styles.PerformanceMetrics__icon} />
           {tokensPerSecond} TPS
         </span>
       )}
       
       {showDetailedMetrics && (
-        <span className={styles.detailedMetric} title={tokenTooltip}>
-          <InfoIcon className={styles.icon} />
+        <span className={`${styles.PerformanceMetrics__metric} ${styles['PerformanceMetrics__metric--detailed']}`} title={tokenTooltip}>
+          <InfoIcon className={styles.PerformanceMetrics__icon} />
           P:{promptTokens}/T:{totalTokens}
         </span>
       )}
@@ -183,5 +180,20 @@ const InfoIcon = ({ className }) => (
 
 // Display name for debugging
 PerformanceMetrics.displayName = 'PerformanceMetrics';
+
+// PropTypes
+PerformanceMetrics.propTypes = {
+  metrics: PropTypes.shape({
+    elapsedTime: PropTypes.number,
+    tokensPerSecond: PropTypes.number,
+    isComplete: PropTypes.bool,
+    promptTokens: PropTypes.number,
+    completionTokens: PropTypes.number,
+    totalTokens: PropTypes.number,
+    finishReason: PropTypes.string
+  })
+};
+
+// Removed defaultProps; default parameter used instead
 
 export default PerformanceMetrics; 

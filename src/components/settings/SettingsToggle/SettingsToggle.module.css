@@ -1,151 +1,128 @@
-.settingsToggle {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background-color: var(--bg-secondary);
+.SettingsToggle {
+  /* background-color: var(--card-bg); */
   border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
   transition: background-color 0.2s, transform 0.2s;
 }
 
-.settingsToggle:hover {
-  background-color: var(--hover);
-}
-
-.settingsToggle:active {
+.SettingsToggle:active {
   transform: scale(0.95);
 }
 
-.settingsToggle:focus {
+.SettingsToggle:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(var(--button-bg-rgb), 0.3);
+  box-shadow: 0 0 0 2px rgb(var(--button-bg-rgb), 0.3);
 }
 
-.settingsToggle.open {
-  background-color: var(--button-bg);
-  color: var(--button-text);
-}
-
-.icon {
-  width: 20px;
-  height: 20px;
-  transition: transform 0.3s;
-}
-
-.settingsToggle.open .icon {
-  transform: rotate(90deg);
-}
-
-.toggleButton {
-  transition: background-color var(--theme-transition-duration) var(--theme-transition-timing), 
-              transform 0.2s;
-}
-
-.toggleIcon {
-  transition: transform 0.3s, 
-              color var(--theme-transition-duration) var(--theme-transition-timing);
-}
-
-/* Common styles for boolean controls */
-.toggleContainer, .switchContainer {
+.SettingsToggle__toggleContainer,
+.SettingsToggle__switchContainer {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.75rem 0;
+  padding: 0.5rem 0;
 }
 
-.toggleContainer.disabled, .switchContainer.disabled { opacity: 0.6; cursor: not-allowed; }
+.SettingsToggle--disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
 
-.toggleLabel {
+.SettingsToggle__label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 500;
   cursor: pointer;
+  transition: transform 0.3s;
 }
 
-.labelText {
+.SettingsToggle__labelText {
   color: var(--text-primary, #fff);
   font-size: 0.95rem;
 }
 
-/* Toggle variant */
-.toggleTrack {
+.SettingsToggle__track {
   position: relative;
   width: 42px;
   height: 22px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--toggle-track, rgba(150, 150, 150, 0.7));
   border-radius: 34px;
   transition: background-color 0.3s;
   cursor: pointer;
 }
 
-.toggleThumb {
+.SettingsToggle__thumb {
   position: absolute;
-  content: "";
   height: 18px;
   width: 18px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--toggle-thumb, #ffffff);
   border-radius: 50%;
   transition: transform 0.3s;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.toggleTrack.checked { background-color: var(--button-bg-color, rgba(87, 157, 152, 0.75)); }
-.toggleTrack.checked .toggleThumb { transform: translateX(20px); }
+.SettingsToggle__track--checked {
+  background-color: var(--toggle-track-active, rgba(87, 157, 152, 0.9));
+}
 
-/* Switch variant */
-.switchTrack {
+.SettingsToggle__track--checked .SettingsToggle__thumb {
+  transform: translateX(20px);
+}
+
+/* Disabled styles */
+.SettingsToggle--disabled .SettingsToggle__track {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.SettingsToggle--disabled .SettingsToggle__thumb {
+  opacity: 0.8;
+}
+
+.SettingsToggle__switchTrack {
   position: relative;
   width: 38px;
   height: 20px;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--toggle-track, rgba(150, 150, 150, 0.7));
   border-radius: 34px;
   transition: background-color 0.3s;
   cursor: pointer;
 }
 
-.switchThumb {
+.SettingsToggle__switchThumb {
   position: absolute;
-  content: "";
   height: 16px;
   width: 16px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--toggle-thumb, #ffffff);
   border-radius: 50%;
   transition: transform 0.3s;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.switchTrack.checked { background-color: var(--button-bg-color, rgba(87, 157, 152, 0.75)); }
-.switchTrack.checked .switchThumb { transform: translateX(18px); }
+.SettingsToggle__switchTrack--checked {
+  background-color: var(--toggle-track-active, rgba(87, 157, 152, 0.9));
+}
 
-/* Size variants */
-.small .toggleTrack { width: 34px; height: 18px; }
-.small .toggleThumb { height: 14px; width: 14px; }
-.small .toggleTrack.checked .toggleThumb { transform: translateX(16px); }
+.SettingsToggle__switchTrack--checked .SettingsToggle__switchThumb {
+  transform: translateX(18px);
+}
 
-.small .switchTrack { width: 30px; height: 16px; }
-.small .switchThumb { height: 12px; width: 12px; }
-.small .switchTrack.checked .switchThumb { transform: translateX(14px); }
+/* Disabled switch styles */
+.SettingsToggle--disabled .SettingsToggle__switchTrack {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
-.large .toggleTrack { width: 50px; height: 26px; }
-.large .toggleThumb { height: 22px; width: 22px; }
-.large .toggleTrack.checked .toggleThumb { transform: translateX(24px); }
+.SettingsToggle--disabled .SettingsToggle__switchThumb {
+  opacity: 0.8;
+}
 
-.large .switchTrack { width: 46px; height: 24px; }
-.large .switchThumb { height: 20px; width: 20px; }
-.large .switchTrack.checked .switchThumb { transform: translateX(22px); }
-
-/* Utility classes */
-.srOnly {
+.SettingsToggle__srOnly {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -153,21 +130,109 @@
   margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
-  border: 0;
+  white-space: nowrap;
+  border-width: 0;
 }
 
-.tooltip {
+/* ===============================
+   MEDIA QUERIES
+   =============================== */
+
+/* Mobile (≤ 550px) */
+@media (width <= 550px) {
+  .SettingsToggle__track {
+    width: 36px;
+    height: 20px;
+  }
+  
+  .SettingsToggle__thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .SettingsToggle__track--checked .SettingsToggle__thumb {
+    transform: translateX(16px);
+  }
+  
+  .SettingsToggle__switchTrack {
+    width: 34px;
+    height: 18px;
+  }
+  
+  .SettingsToggle__switchThumb {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .SettingsToggle__switchTrack--checked .SettingsToggle__switchThumb {
+    transform: translateX(16px);
+  }
+  
+  .SettingsToggle__labelText {
+    font-size: 0.85rem;
+  }
+}
+
+/* Desktop (> 550px) */
+@media (min-width: 551px) {
+  /* Default styles already work for desktop */
+}
+
+/* Size variants - maintain these for explicit size overrides */
+.SettingsToggle--small .SettingsToggle__track {
+  width: 36px;
+  height: 20px;
+}
+
+.SettingsToggle--small .SettingsToggle__thumb {
+  width: 16px;
+  height: 16px;
+}
+
+.SettingsToggle--small .SettingsToggle__track--checked .SettingsToggle__thumb {
+  transform: translateX(16px);
+}
+
+.SettingsToggle--large .SettingsToggle__track {
+  width: 60px;
+  height: 34px;
+}
+
+.SettingsToggle--large .SettingsToggle__thumb {
+  width: 26px;
+  height: 26px;
+}
+
+.SettingsToggle--large .SettingsToggle__track--checked .SettingsToggle__thumb {
+  transform: translateX(26px);
+}
+
+.SettingsToggle--large .SettingsToggle__switchTrack {
+  width: 70px;
+  height: 38px;
+}
+
+.SettingsToggle--large .SettingsToggle__switchThumb {
+  width: 30px;
+  height: 30px;
+}
+
+.SettingsToggle--large .SettingsToggle__switchTrack--checked .SettingsToggle__switchThumb {
+  transform: translateX(32px);
+}
+
+.SettingsToggle__tooltip {
   position: relative;
   cursor: help;
 }
 
-.infoIcon {
+.SettingsToggle__infoIcon {
   width: 16px;
   height: 16px;
   color: var(--text-secondary, #a0a0a0);
 }
 
-.tooltip:hover::before {
+.SettingsToggle__tooltip:hover::before {
   content: attr(data-tooltip);
   position: absolute;
   bottom: 125%;
@@ -176,7 +241,7 @@
   min-width: 200px;
   padding: 8px 12px;
   border-radius: 6px;
-  background-color: rgba(40, 40, 40, 0.95);
+  background-color: rgb(40 40 40 / 95%);
   color: #fff;
   font-size: 0.8rem;
   text-align: center;
@@ -184,11 +249,9 @@
   pointer-events: none;
 }
 
-.hiddenInput {
+.SettingsToggle__hiddenInput {
   opacity: 0;
   position: absolute;
   width: 0;
   height: 0;
 }
-
-.disabled { pointer-events: none; } 

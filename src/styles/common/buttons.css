@@ -1,3 +1,5 @@
+@import '../theme.css';
+
 /**
  * Common button styles
  * This file contains reusable button styles that can be imported by other components
@@ -5,7 +7,7 @@
 
 /* Define common button variables */
 :root {
-  --button-size: 36px;
+  --button-size: 40px;
   --button-icon-size: 20px;
   --button-transition: 
     background-color var(--theme-transition-duration) var(--theme-transition-timing),
@@ -13,14 +15,18 @@
     border-color var(--theme-transition-duration) var(--theme-transition-timing),
     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.2s ease;
-  --button-shadow: none;
-  --button-border: 1px solid var(--border);
-  --button-bg: transparent !important;
-  --button-hover-bg: transparent !important;
+  --border-accent: 1px solid var(--border);
   --button-active-scale: 0.95;
   --button-hover-scale: 1.05;
   --button-disabled-opacity: 0.7;
   --button-icon-opacity: 0.8;
+}
+
+/* Disable button transitions on mobile screens */
+@media (max-width: 600px) {
+  :root {
+    --button-transition: none !important;
+  }
 }
 
 /* Base button styles */
@@ -29,7 +35,7 @@
   height: var(--button-size);
   border-radius: 50%;
   background-color: transparent !important;
-  border: var(--button-border);
+  border: var(--border-accent);
   box-shadow: none;
   display: flex;
   align-items: center;
@@ -41,8 +47,14 @@
   flex-shrink: 0;
 }
 
+/* Define state order: disabled, then hover/active */
+.circleActionButton:disabled {
+  opacity: var(--button-disabled-opacity);
+  cursor: not-allowed;
+  transform: none;
+}
+
 .circleActionButton:hover:not(:disabled) {
-  background-color: transparent !important;
   transform: scale(var(--button-hover-scale));
   border-color: var(--text);
 }
@@ -51,38 +63,22 @@
   transform: scale(var(--button-active-scale));
 }
 
-.circleActionButton:disabled {
-  opacity: var(--button-disabled-opacity);
-  cursor: not-allowed;
-  transform: none;
-}
-
 /* Icon styles for buttons */
 .buttonIcon {
   color: var(--text);
   transition: var(--button-transition);
   opacity: var(--button-icon-opacity);
-  border: 2px solid var(--text);
-  border-radius: 4px;
-  padding: 2px;
+  border: var(--border-width-sm) solid var(--text);
+  padding: var(--space-xxs);
   background: transparent;
 }
 
 .circleActionButton:hover:not(:disabled) .buttonIcon {
-  opacity: 1;
+  opacity: var(--opacity-xxl);
   border-color: var(--text);
   transform: scale(1.1);
 }
 
-/* Loading animation */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 .loadingIcon {
   animation: spin 1s linear infinite;

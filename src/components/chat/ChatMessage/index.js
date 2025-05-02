@@ -1,22 +1,22 @@
 // eslint-disable import/first
-import React, { memo, useMemo, useState, lazy, Suspense } from 'react';
+import React, { memo, useMemo, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import PropTypes from 'prop-types';
-import LazyMarkdownRenderer from '../../common/LazyMarkdownRenderer';
-import { PersonIcon, CopilotIcon, GearIcon, AlertIcon, CheckIcon, CopyIcon, ClockIcon, PulseIcon, PencilIcon } from '@primer/octicons-react';
+import { CopilotIcon, GearIcon, AlertIcon, CheckIcon, CopyIcon, ClockIcon, PulseIcon, PencilIcon } from '@primer/octicons-react';
 import styles from './ChatMessage.module.css';
+import { formatTime } from '../../../utils/messageHelpers';
 import { convertTeXToMathDollars } from '../../../utils/formatters';
+// Lazy-load Markdown renderer for user/system/error messages
+import LazyMarkdownRenderer from '../../common/LazyMarkdownRenderer';
 // Dynamically load StreamingMessage to defer heavy modules
-const StreamingMessage = lazy(() => import(/* webpackChunkName: "streaming-message" */ './StreamingMessage'));
+const StreamingMessage = lazy(() => import(/* webpackChunkName: "streaming-message", webpackPrefetch: true */ './StreamingMessage'));
 
-/**
- * Format time in milliseconds to a human-readable format
- * @param {number} ms - Time in milliseconds
- * @returns {string} - Formatted time string
- */
-const formatTime = (ms) => {
-  if (!ms) return '0.0s';
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
+// Add a module-level singleton for the TeX worker so we only load the worker script once
+let texWorker;
+const getTexWorker = () => {
+  if (typeof Worker !== 'undefined' && !texWorker) {
+    texWorker = new Worker(new URL('../../../workers/texProcessor.js', import.meta.url), { type: 'module' });
+  }
+  return texWorker;
 };
 
 /**
@@ -26,38 +26,73 @@ const formatTime = (ms) => {
  * @param {string} props.content - Message content
  * @param {number} props.index - Message index in the chat history
  * @param {boolean} props.isStreaming - Whether this message is currently streaming
+ * @param {string} props.avatarUrl - Optional URL for user avatar image
  * @returns {JSX.Element} - Rendered component
  */
-const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
+const ChatMessage = ({ message, isStreaming = false, onEditMessage = null, overrideContent = null, avatarUrl = null }) => {
+  // Use overrideContent if provided, else fall back to message.content
+  const content = overrideContent != null ? overrideContent : message.content;
+
   const [messageCopied, setMessageCopied] = useState(false);
+  const defaultProcessedMessage = useMemo(() => (
+    message.role === 'assistant'
+      ? content
+      : convertTeXToMathDollars(content)
+  ), [content, message.role]);
+  const [processedMessage, setProcessedMessage] = useState(defaultProcessedMessage);
+
+  // Update processedMessage whenever the underlying content changes (e.g., after editing)
+  useEffect(() => {
+    setProcessedMessage(defaultProcessedMessage);
+  }, [defaultProcessedMessage]);
+
+  useEffect(() => {
+    if (message.role !== 'assistant' || typeof content !== 'string' || typeof Worker === 'undefined') {
+      return;
+    }
+    const id = message.timestamp;
+    const worker = getTexWorker();
+    const handleMessage = (e) => {
+      if (e.data.id !== id) return;
+      if (e.data.success) setProcessedMessage(e.data.data);
+      else setProcessedMessage(content);
+    };
+    worker.addEventListener('message', handleMessage);
+    worker.postMessage({ id, content });
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+    };
+  }, [content, message.role, message.timestamp]);
   
   // Choose appropriate icon based on message role
   const icon = useMemo(() => {
     switch (message.role) {
       case 'user':
-        return <PersonIcon size={16} className={styles.icon} />;
+        return avatarUrl
+          ? <img src={avatarUrl} alt="User avatar" className={styles.ChatMessage__avatarImg} />
+          : null;
       case 'assistant':
-        return <CopilotIcon size={16} className={styles.icon} />;
+        return <CopilotIcon size={16} className={styles.ChatMessage__icon} />;
       case 'system':
-        return <GearIcon size={16} className={styles.icon} />;
+        return <GearIcon size={16} className={styles.ChatMessage__icon} />;
       case 'error':
-        return <AlertIcon size={16} className={styles.icon} />;
+        return <AlertIcon size={16} className={styles.ChatMessage__icon} />;
       default:
         return null;
     }
-  }, [message.role]);
+  }, [message.role, avatarUrl]);
   
   // Select CSS classes based on message role
   const messageClass = useMemo(() => {
     switch (message.role) {
       case 'user':
-        return styles.userMessage;
+        return styles['ChatMessage--user'];
       case 'assistant':
-        return styles.assistantMessage;
+        return styles['ChatMessage--assistant'];
       case 'system':
-        return styles.systemMessage;
+        return styles['ChatMessage--system'];
       case 'error':
-        return styles.errorMessage;
+        return styles['ChatMessage--error'];
       default:
         return '';
     }
@@ -71,8 +106,7 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
   }, [message.role, message.metrics]);
   
   // Copy message content to clipboard
-  const handleCopyMessage = () => {
-    // If content is an array (multimodal message), extract just the text
+  const handleCopyMessage = useCallback(() => {
     const content = typeof message.content === 'string' 
       ? message.content 
       : Array.isArray(message.content) 
@@ -81,18 +115,17 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
             .map(part => part.text)
             .join('\n')
         : '';
-        
     navigator.clipboard.writeText(content).then(() => {
       setMessageCopied(true);
       setTimeout(() => setMessageCopied(false), 2000);
     });
-  };
+  }, [message.content]);
   
   // === BUTTON JSX (Moved here for reuse) ===
-  const copyButtonJsx = (
+  const copyButtonJsx = useMemo(() => (
     <button
-      className={`${styles.copyMessageButton} ${ // Apply conditional class later
-        (message.role === 'assistant' && shouldShowMetrics) ? styles.copyButtonInMetrics : styles.copyButtonBottomRight
+      className={`${styles.ChatMessage__copyMessageButton} ${
+        (message.role === 'assistant' && shouldShowMetrics) ? styles.ChatMessage__copyMessageButtonInMetrics : styles.ChatMessage__copyMessageButtonBottomRight
       }`}
       onClick={handleCopyMessage}
       aria-label="Copy message"
@@ -100,22 +133,25 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
     >
       {messageCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
     </button>
-  );
+  ), [handleCopyMessage, message.role, shouldShowMetrics, messageCopied]);
 
   // Edit button only for user messages
-  const editButtonJsx = message.role === 'user' ? (
+  const handleEditClick = useCallback(() => {
+    if (onEditMessage) onEditMessage(message);
+  }, [onEditMessage, message]);
+  const editButtonJsx = useMemo(() => message.role === 'user' ? (
     <button
-      className={styles.editMessageButton}
-      onClick={() => onEditMessage && onEditMessage(message)}
+      className={styles.ChatMessage__editMessageButton}
+      onClick={handleEditClick}
       aria-label="Edit message"
       title="Edit message"
     >
       <PencilIcon size={16} />
     </button>
-  ) : null;
+  ) : null, [message.role, handleEditClick]);
   // ==========================================
   
-  // Render performance metrics (Now includes the button)
+  // Render performance metrics (only for assistant messages)
   const renderMetrics = () => {
     if (!shouldShowMetrics || !message.metrics) return null;
     
@@ -147,65 +183,65 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
     if (!hasValidMetrics) return null;
     
     return (
-      <div className={styles.metricsContainer}>
+      <div className={styles.ChatMessage__metricsContainer}>
         {/* Time metrics */}
         {timeToFirstToken != null && timeToFirstToken !== 0 && (
-          <span className={styles.metric}>
-            <ClockIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <ClockIcon size={14} className={styles.ChatMessage__metricIcon} />
             First Token: {formatTime(timeToFirstToken)}
           </span>
         )}
         {elapsedTime != null && elapsedTime !== 0 && (
-          <span className={styles.metric}>
-            <ClockIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <ClockIcon size={14} className={styles.ChatMessage__metricIcon} />
             Total Time: {formatTime(elapsedTime)}
           </span>
         )}
         
         {/* Token metrics */}
         {tokenCount != null && tokenCount !== 0 && (
-          <span className={styles.metric}>
-            <CopilotIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <CopilotIcon size={14} className={styles.ChatMessage__metricIcon} />
             Tokens: {tokenCount}
           </span>
         )}
         {promptTokens != null && promptTokens !== 0 && (
-          <span className={styles.metric}>
-            <CopilotIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <CopilotIcon size={14} className={styles.ChatMessage__metricIcon} />
             Prompt: {promptTokens}
           </span>
         )}
         {completionTokens != null && completionTokens !== 0 && (
-          <span className={styles.metric}>
-            <CopilotIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <CopilotIcon size={14} className={styles.ChatMessage__metricIcon} />
             Completion: {completionTokens}
           </span>
         )}
         {totalTokens != null && totalTokens !== 0 && (
-          <span className={styles.metric}>
-            <CopilotIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <CopilotIcon size={14} className={styles.ChatMessage__metricIcon} />
             Total: {totalTokens}
           </span>
         )}
         
         {/* Speed metrics */}
         {tokensPerSecond != null && tokensPerSecond !== 0 && (
-          <span className={styles.metric}>
-            <PulseIcon size={14} className={styles.metricIcon} />
+          <span className={styles.ChatMessage__metric}>
+            <PulseIcon size={14} className={styles.ChatMessage__metricIcon} />
             Speed: {tokensPerSecond} t/s
           </span>
         )}
         
-        {/* Status */}
-        {finishReason != null && finishReason !== '' && (
-          <span className={styles.metric}>
-            <AlertIcon size={14} className={styles.metricIcon} />
+        {/* Status (only show if meaningful) */}
+        {finishReason != null && finishReason !== '' && finishReason.toLowerCase() !== 'stop' && finishReason.toLowerCase() !== 'unknown' && (
+          <span className={styles.ChatMessage__metric}>
+            <AlertIcon size={14} className={styles.ChatMessage__metricIcon} />
             {finishReason}
           </span>
         )}
         {isGenerating && (
-          <span className={`${styles.metric} ${styles.generatingIndicator}`}>
-            <span className={styles.generatingDot}></span>
+          <span className={`${styles.ChatMessage__metric} ${styles.ChatMessage__generatingIndicator}`}>
+            <span className={styles.ChatMessage__generatingDot}></span>
             Generating...
           </span>
         )}
@@ -216,49 +252,43 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
     );
   };
   
-  // Process markdown content safely
-  const renderMarkdown = (content) => {
-    // Convert TeX notation if content is a string
-    const processedContent = typeof content === 'string' ? convertTeXToMathDollars(content) : content;
-    
-    // Use dynamic LazyMarkdownRenderer for non-blocking markdown rendering
-    return (
-      <Suspense fallback={null}>
-        <LazyMarkdownRenderer>
-          {processedContent}
-        </LazyMarkdownRenderer>
-      </Suspense>
-    );
-  };
-  
   // Main return
   return (
-    <div className={styles.message + ' ' + messageClass}>
-      {/* Avatar section */}
-      <div className={styles.avatar}>
-        {icon}
-      </div>
-      
-      {/* Message content section */}
-      <div className={styles.messageContentWrapper}>
-        <div className={styles.messageContent}>
-          {message.role === 'assistant' ? (
-            <StreamingMessage content={message.content} isStreaming={isStreaming} />
-          ) : (
-            renderMarkdown(message.content || '')
-          )}
+    <div className={styles.ChatMessage + ' ' + messageClass}>
+      <div className={styles.ChatMessage__body}>
+        {/* Avatar (only render if icon exists) */}
+        {icon && (
+          <div className={styles.ChatMessage__avatar}>{icon}</div>
+        )}
+
+        {/* Message content section */}
+        <div className={styles.ChatMessage__contentWrapper}>
+          <Suspense fallback={null}>
+            <div className={styles.ChatMessage__content}>
+              {message.role === 'assistant' ? (
+                <StreamingMessage
+                  content={processedMessage}
+                  isStreaming={isStreaming}
+                />
+              ) : (
+                // Render markdown lazily for user/system/error messages
+                <LazyMarkdownRenderer>
+                  {processedMessage}
+                </LazyMarkdownRenderer>
+              )}
+            </div>
+          </Suspense>
+
+          {/* Render performance metrics for assistant messages */}
+          {message.role === 'assistant' && renderMetrics()}
+
+          {/* Copy button for non-user messages, hide when assistant metrics exist */}
+          {message.role !== 'user' && (message.role !== 'assistant' || !shouldShowMetrics) && copyButtonJsx}
         </div>
-
-        {/* Render metrics (which now includes the button if applicable) */}
-        {message.role === 'assistant' && renderMetrics()}
-
-        {/* Render copy button at bottom-right for non-user assistant without metrics */}
-        {message.role !== 'user' && (message.role !== 'assistant' || !shouldShowMetrics) && copyButtonJsx}
       </div>
 
-      {/* User message buttons container */}
       {message.role === 'user' && (
-        <div className={styles.userButtonContainer}>
+        <div className={styles.ChatMessage__actions}>
           {editButtonJsx}
           {copyButtonJsx}
         </div>
@@ -267,16 +297,40 @@ const ChatMessage = ({ message, isStreaming, onEditMessage }) => {
   );
 };
 
+// Display name
+ChatMessage.displayName = 'ChatMessage';
+
+// PropTypes
 ChatMessage.propTypes = {
   message: PropTypes.shape({
-    role: PropTypes.string.isRequired,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    role: PropTypes.oneOf(['user', 'assistant', 'system', 'error']).isRequired,
     content: PropTypes.oneOfType([
       PropTypes.string,
-      PropTypes.array
-    ]).isRequired
+      PropTypes.arrayOf(PropTypes.shape({ // Support complex content
+        type: PropTypes.string.isRequired,
+        text: PropTypes.string,
+        image_url: PropTypes.shape({
+          url: PropTypes.string.isRequired
+        })
+      }))
+    ]).isRequired,
+    timestamp: PropTypes.number.isRequired,
+    metrics: PropTypes.shape({
+      elapsedTime: PropTypes.number,
+      tokenCount: PropTypes.number,
+      tokensPerSecond: PropTypes.number,
+      timeToFirstToken: PropTypes.number,
+      promptTokens: PropTypes.number,
+      completionTokens: PropTypes.number,
+      totalTokens: PropTypes.number,
+      finishReason: PropTypes.string
+    })
   }).isRequired,
   isStreaming: PropTypes.bool,
-  onEditMessage: PropTypes.func
+  onEditMessage: PropTypes.func,
+  overrideContent: PropTypes.string, // Optional override for rendering previews
+  avatarUrl: PropTypes.string, // Optional URL for user avatar image
 };
 
 export default memo(ChatMessage); 

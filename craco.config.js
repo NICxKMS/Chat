@@ -1,4 +1,3 @@
-// const path = require('path');
 // let BundleAnalyzerPlugin;
 // try {
 //   BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
@@ -6,8 +5,16 @@
 //   console.warn('webpack-bundle-analyzer not found. Bundle analysis will be disabled.');
 //   BundleAnalyzerPlugin = null;
 // }
+// let ESLintPlugin;
+// try {
+//   ESLintPlugin = require('eslint-webpack-plugin').ESLintPlugin;
+// } catch (error) {
+//   console.warn('eslint-webpack-plugin not found. ESLint will be disabled.');
+//   ESLintPlugin = null;
+// }
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const { version } = require('./package.json');
 
 module.exports = {
   devServer: {
@@ -118,16 +125,16 @@ module.exports = {
                 chunks: 'all',
                 priority: 50, // Highest priority to override all other rules
               },
-              // Small modules bundled together
-              smallChunks: {
-                // Merge all modules smaller than 10KB into this bundle
-                test: module => module.size() < 10000,
-                name: 'small-chunks',
-                chunks: 'all',
-                priority: -5, // Low priority to run after other groups
-                reuseExistingChunk: true,
-                enforce: true
-              }
+              // // Small modules bundled together
+              // smallChunks: {
+              //   // Merge all modules smaller than 10KB into this bundle
+              //   test: module => module.size() < 10000,
+              //   name: 'small-chunks',
+              //   chunks: 'all',
+              //   priority: -5, // Low priority to run after other groups
+              //   reuseExistingChunk: true,
+              //   enforce: true
+              // }
             }
           },
           usedExports: true,
@@ -146,18 +153,29 @@ module.exports = {
           ]
         };
 
-        if (process.env.ANALYZE === 'true' && BundleAnalyzerPlugin) {
-          webpackConfig.plugins.push(
-            new BundleAnalyzerPlugin({
-              analyzerMode: 'static',
-              reportFilename: 'bundle-report.html',
-              generateStatsFile: true,
-              statsFilename: 'stats.json'
-            })
-          );
-        } else if (process.env.ANALYZE === 'true') {
-          console.warn('Analysis requested (ANALYZE=true), but webpack-bundle-analyzer is not installed or failed to load.');
-        }
+        // add version-based cache busting to filenames
+        const ver = version.replace(/\./g, '_');
+        webpackConfig.output.filename = `static/js/[name].[contenthash:10].v${ver}.js`;
+        webpackConfig.output.chunkFilename = `static/js/[name].[contenthash:10].chunk.v${ver}.js`;
+        webpackConfig.plugins.forEach(plugin => {
+          if (plugin.constructor.name === 'MiniCssExtractPlugin') {
+            plugin.options.filename = `static/css/[name].[contenthash:10].v${ver}.css`;
+            plugin.options.chunkFilename = `static/css/[name].[contenthash:10].chunk.v${ver}.css`;
+          }
+        });
+
+        // if (process.env.ANALYZE === 'true' && BundleAnalyzerPlugin) {
+        //   webpackConfig.plugins.push(
+        //     new BundleAnalyzerPlugin({
+        //       analyzerMode: 'static',
+        //       reportFilename: 'bundle-report.html',
+        //       generateStatsFile: true,
+        //       statsFilename: 'stats.json'
+        //     })
+        //   );
+        // } else if (process.env.ANALYZE === 'true') {
+        //   console.warn('Analysis requested (ANALYZE=true), but webpack-bundle-analyzer is not installed or failed to load.');
+        // }
       }
       return webpackConfig;
     }

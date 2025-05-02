@@ -5,6 +5,7 @@ import React, {
   useMemo, 
   useState
 } from 'react';
+import PropTypes from 'prop-types';
 import { useModel, useModelFilter } from '../../../contexts/ModelContext';
 import ModelItem from '../ModelItem';
 import ModelSearch from '../ModelSearch';
@@ -14,20 +15,24 @@ import styles from './ModelDropdown.module.css';
  * SelectedModelDisplay component showing the currently selected model
  */
 const SelectedModelDisplay = React.memo(({ selectedModel }) => (
-  <div className={styles.selectedModelContainer}>
-    <div className={styles.selectedModelLabel}>Current Model:</div>
-    <div className={styles.selectedModelInfo}>
-      <h3 className={styles.modelName}>
+  <div className={styles.ModelDropdown__selectedModelContainer}>
+    <div className={styles.ModelDropdown__selectedModelLabel}>Current Model:</div>
+    <div className={styles.ModelDropdown__selectedModelInfo}>
+      <h3 className={styles.ModelDropdown__modelName}>
         {selectedModel ? selectedModel.name : 'No model selected'}
       </h3>
       {selectedModel && (
-        <p className={styles.modelDescription}>
+        <p className={styles.ModelDropdown__modelDescription}>
           {selectedModel.provider ? `${selectedModel.provider} - ${selectedModel.type}` : 'Model details unavailable'}
         </p>
       )}
     </div>
   </div>
 ));
+
+SelectedModelDisplay.propTypes = {
+  selectedModel: PropTypes.object
+};
 
 /**
  * CapabilityTabs component for selecting model categories
@@ -38,7 +43,7 @@ const CapabilityTabs = React.memo(({ capabilities, activeCapability, onSelectCap
   // Scroll the selected tab into view when it changes
   useEffect(() => {
     if (tabsRef.current) {
-      const activeTab = tabsRef.current.querySelector(`.${styles.active}`);
+      const activeTab = tabsRef.current.querySelector(`.${styles['ModelDropdown__capabilityTab--active']}`);
       if (activeTab) {
         // Calculate position to center the tab in the container
         const container = tabsRef.current;
@@ -57,11 +62,11 @@ const CapabilityTabs = React.memo(({ capabilities, activeCapability, onSelectCap
   }, [activeCapability]);
   
   return (
-    <div className={styles.capabilityTabs} ref={tabsRef}>
+    <div className={styles.ModelDropdown__capabilityTabs} ref={tabsRef}>
       {Object.keys(capabilities).map(capability => (
         <button
           key={capability}
-          className={`${styles.capabilityTab} ${activeCapability === capability ? styles.active : ''}`}
+          className={`${styles.ModelDropdown__capabilityTab} ${activeCapability === capability ? styles['ModelDropdown__capabilityTab--active'] : ''}`}
           onClick={() => onSelectCapability(capability)}
         >
           {capability}
@@ -72,20 +77,26 @@ const CapabilityTabs = React.memo(({ capabilities, activeCapability, onSelectCap
   );
 });
 
+CapabilityTabs.propTypes = {
+  capabilities: PropTypes.object.isRequired,
+  activeCapability: PropTypes.string.isRequired,
+  onSelectCapability: PropTypes.func.isRequired
+};
+
 /**
  * ModelList component showing the filtered and grouped models
  */
 const ModelList = React.memo(({ isLoading, groupedModels, selectedModel, onSelectModel, searchTerm, totalCount, activeCapability, onClearSearch }) => (
-  <div className={styles.modelList} role="listbox">
+  <div className={styles.ModelDropdown__modelList} role="listbox">
     {isLoading ? (
-      <div className={styles.loading}>Loading models...</div>
+      <div className={styles.ModelDropdown__loading}>Loading models...</div>
     ) : groupedModels && Object.keys(groupedModels).length > 0 ? (
       groupedModels.map((group) => (
         <div key={`${group.provider}-${group.type}`}>
-          <div className={styles.providerTypeHeader}>
-            <span className={styles.providerName}>{group.provider}</span>
-            <span className={styles.providerTypeSeparator}>→</span>
-            <span className={styles.typeLabel}>{group.type}</span>
+          <div className={styles.ModelDropdown__providerTypeHeader}>
+            <span className={styles.ModelDropdown__providerName}>{group.provider}</span>
+            <span className={styles.ModelDropdown__providerTypeSeparator}>→</span>
+            <span className={styles.ModelDropdown__typeLabel}>{group.type}</span>
             <span className={styles.modelCount}>({group.models.length})</span>
           </div>
           
@@ -102,17 +113,17 @@ const ModelList = React.memo(({ isLoading, groupedModels, selectedModel, onSelec
       ))
     ) : (
       searchTerm && totalCount === 0 ? (
-        <div className={styles.noResults}>
+        <div className={styles.ModelDropdown__noResults}>
           No models found matching "{searchTerm}"
           <button 
-            className={styles.clearSearch}
+            className={styles.ModelDropdown__clearSearch}
             onClick={onClearSearch}
           >
             Clear search
           </button>
         </div>
       ) : (
-        <div className={styles.noResults}>
+        <div className={styles.ModelDropdown__noResults}>
           No {activeCapability.toLowerCase()} models available
         </div>
       )
@@ -120,11 +131,22 @@ const ModelList = React.memo(({ isLoading, groupedModels, selectedModel, onSelec
   </div>
 ));
 
+ModelList.propTypes = {
+  isLoading: PropTypes.bool.isRequired,
+  groupedModels: PropTypes.array,
+  selectedModel: PropTypes.object,
+  onSelectModel: PropTypes.func.isRequired,
+  searchTerm: PropTypes.string,
+  totalCount: PropTypes.number,
+  activeCapability: PropTypes.string.isRequired,
+  onClearSearch: PropTypes.func.isRequired
+};
+
 /**
  * SearchContainer component for model searching
  */
 const SearchContainer = React.memo(({ searchTerm, onSearchChange, totalCount }) => (
-  <div className={styles.searchContainer}>
+  <div className={styles.ModelDropdown__searchContainer}>
     <ModelSearch 
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
@@ -132,6 +154,12 @@ const SearchContainer = React.memo(({ searchTerm, onSearchChange, totalCount }) 
     />
   </div>
 ));
+
+SearchContainer.propTypes = {
+  searchTerm: PropTypes.string,
+  onSearchChange: PropTypes.func.isRequired,
+  totalCount: PropTypes.number
+};
 
 /**
  * ModelSelectionPanel component for selecting models from a filterable list
@@ -150,8 +178,8 @@ const ModelSelectionPanel = React.forwardRef(({
   totalCount,
   handleClearSearch 
 }, ref) => (
-  <div className={styles.modelsContainer} ref={ref}>
-    <div className={styles.fixedHeader}>
+  <div className={styles.ModelDropdown__modelsContainer} ref={ref}>
+    <div className={styles.ModelDropdown__fixedHeader}>
       <CapabilityTabs 
         capabilities={capabilitiesWithCounts} 
         activeCapability={activeCapability} 
@@ -159,7 +187,7 @@ const ModelSelectionPanel = React.forwardRef(({
       />
     </div>
     
-    <div className={styles.scrollableModelList}>
+    <div className={styles.ModelDropdown__scrollableModelList}>
       <ModelList 
         isLoading={isLoading}
         groupedModels={groupedModels}
@@ -173,6 +201,21 @@ const ModelSelectionPanel = React.forwardRef(({
     </div>
   </div>
 ));
+
+ModelSelectionPanel.propTypes = {
+  isExperimentalModelsEnabled: PropTypes.bool,
+  toggleExperimentalModels: PropTypes.func,
+  capabilitiesWithCounts: PropTypes.object.isRequired,
+  activeCapability: PropTypes.string.isRequired,
+  setActiveCapability: PropTypes.func.isRequired,
+  isLoading: PropTypes.bool.isRequired,
+  groupedModels: PropTypes.array,
+  selectedModel: PropTypes.object,
+  handleSelectModel: PropTypes.func.isRequired,
+  searchTerm: PropTypes.string,
+  totalCount: PropTypes.number,
+  handleClearSearch: PropTypes.func.isRequired
+};
 
 // Helper function to format provider name
 const formatProviderName = (provider) => {

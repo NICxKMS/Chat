@@ -6,7 +6,7 @@ import styles from './ImageOverlay.module.css';
  * Full-screen overlay for displaying an image using React Portal.
  * Clicking anywhere on the overlay closes it.
  */
-const ImageOverlay = ({ src, onClose }) => {
+const ImageOverlay = ({ src, alt, onClose }) => {
   if (!src) return null;
 
   // Prevent clicks on the image itself from closing if needed (optional)
@@ -17,11 +17,11 @@ const ImageOverlay = ({ src, onClose }) => {
 
   // The overlay content
   const overlayContent = (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" title="Click to close image">
+    <div className={styles.ImageOverlay} onClick={onClose} role="dialog" aria-modal="true" title="Click to close image">
       <img 
         src={src} 
-        alt="Full screen view" 
-        className={styles.overlayImage}
+        alt={alt} 
+        className={styles.ImageOverlay__image}
         onClick={handleImageClick} // Handle clicks on the image specifically
       />
     </div>
@@ -36,7 +36,9 @@ const ImageOverlay = ({ src, onClose }) => {
 
 ImageOverlay.propTypes = {
   /** The URL of the image to display */
-  src: PropTypes.string,
+  src: PropTypes.string.isRequired,
+  /** The alt text for the image */
+  alt: PropTypes.string.isRequired,
   /** Function to call when the overlay should be closed */
   onClose: PropTypes.func.isRequired,
 };

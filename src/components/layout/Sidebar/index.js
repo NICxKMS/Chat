@@ -1,6 +1,10 @@
 import { memo } from 'react';
-import { PlusIcon, GearIcon } from '@primer/octicons-react';
+import PropTypes from 'prop-types';
+import { PlusIcon, GearIcon, ChevronLeftIcon } from '@primer/octicons-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useChatControl } from '../../../contexts/ChatControlContext';
+import { useProfilePicture } from '../../../hooks/useProfilePicture';
+import Spinner from '../../common/Spinner';
 import styles from './Sidebar.module.css';
 // Remove unused icons if PlusIcon/GearIcon only used for floating buttons
 // import { GearIcon, PlusIcon } from '@primer/octicons-react'; 
@@ -21,42 +25,36 @@ const sampleSessions = [
  * Sidebar component containing app controls and chat session list
  * @param {Object} props - Component props
  * @param {string} [props.className] - Additional CSS class
- * @param {Function} [props.onNewChat] - Handler for new chat button click
  * @param {Function} [props.onToggleSettings] - Handler for settings button click
+ * @param {Function} [props.onToggleSidebar] - Handler for sidebar toggle button click
  * @returns {JSX.Element} - Rendered sidebar
  */
-const Sidebar = memo(({ className = '', onNewChat, onToggleSettings }) => {
+const Sidebar = memo(({ className = '', onToggleSettings = () => console.warn('Settings handler not provided to Sidebar'), onToggleSidebar = () => console.warn('Sidebar toggle handler not provided to Sidebar') }) => {
   const { currentUser, isAuthenticated } = useAuth();
+  const { newChat } = useChatControl();
+  const { profilePicture: userAvatar, loading: avatarLoading } = useProfilePicture(currentUser?.photoURL);
   
   const userName = currentUser?.displayName || currentUser?.email || 'Sir';
   
   // Handle button clicks with fallbacks
   const handleNewChat = (e) => {
     e.preventDefault();
-    if (onNewChat) {
-      onNewChat();
-    } else {
-      console.warn('New chat handler not provided');
-    }
+    newChat();
   };
 
   const handleSettings = (e) => {
     e.preventDefault();
-    if (onToggleSettings) {
-      onToggleSettings();
-    } else {
-      console.warn('Settings handler not provided');
-    }
+    onToggleSettings();
   };
 
   return (
-    <div className={`${styles.sidebar} ${className}`}>
+    <div className={`${styles.Sidebar} ${className}`}>
       {/* Header with Title and Controls */}
-      <div className={styles.header}>
-        <h1 className={styles.title}>AI Chat</h1>
-        <div className={styles.headerControls}>
+      <div className={styles.Sidebar__header}>
+        <h1 className={styles.Sidebar__title}>AI Chat</h1>
+        <div className={styles.Sidebar__headerControls}>
           <button 
-            className={`${styles.iconButton} ${styles.newChatButton}`}
+            className={`${styles.Sidebar__iconButton} ${styles['Sidebar__iconButton--newChat']}`}
             onClick={handleNewChat}
             aria-label="New chat"
             title="New chat"
@@ -64,24 +62,32 @@ const Sidebar = memo(({ className = '', onNewChat, onToggleSettings }) => {
             <PlusIcon size={20} />
           </button>
           <button 
-            className={`${styles.iconButton} ${styles.settingsButton}`}
+            className={`${styles.Sidebar__iconButton} ${styles['Sidebar__iconButton--settings']}`}
             onClick={handleSettings}
             aria-label="Settings"
             title="Settings"
           >
             <GearIcon size={20} />
           </button>
+          <button
+            className={styles.Sidebar__iconButton}
+            onClick={onToggleSidebar}
+            aria-label="Close sidebar"
+            title="Close sidebar"
+          >
+            <ChevronLeftIcon size={20} />
+          </button>
         </div>
       </div>
       
       {/* Chat Session List */}
-      <div className={styles.chatListContainer}>
-        <ul className={styles.sessionList}>
+      <div className={styles.Sidebar__chatListContainer}>
+        <ul className={styles.Sidebar__sessionList}>
           {sampleSessions.map(session => (
-            <li key={session.id} className={styles.sessionItem}>
-              <button className={styles.sessionButton} onClick={() => console.log('Load session:', session.id)}>
-                <span className={styles.sessionTitle}>{session.title}</span>
-                <span className={styles.sessionTimestamp}>{session.timestamp}</span>
+            <li key={session.id} className={styles.Sidebar__sessionItem}>
+              <button className={styles.Sidebar__sessionButton} onClick={() => console.log('Load session:', session.id)}>
+                <span className={styles.Sidebar__sessionTitle}>{session.title}</span>
+                <span className={styles.Sidebar__sessionTimestamp}>{session.timestamp}</span>
               </button>
             </li>
           ))}
@@ -89,21 +95,29 @@ const Sidebar = memo(({ className = '', onNewChat, onToggleSettings }) => {
       </div>
 
       {/* Footer */}
-      <div className={styles.footer}>
+      <div className={styles.Sidebar__footer}>
         {isAuthenticated ? (
-          <div className={styles.userProfile}>
+          <div className={styles.Sidebar__userProfile}>
             {currentUser?.photoURL ? (
-              <img 
-                src={currentUser.photoURL} 
-                alt={`${userName}'s profile`}
-                className={styles.userAvatar}
-              />
+              avatarLoading ? (
+                <Spinner size="small" tag="avatar" />
+              ) : userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={`${userName}'s profile`}
+                  className={styles.Sidebar__userAvatar}
+                />
+              ) : (
+                <div className={styles.Sidebar__userInitial}>
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              )
             ) : (
-              <div className={styles.userInitial}>
+              <div className={styles.Sidebar__userInitial}>
                 {userName.charAt(0).toUpperCase()}
               </div>
             )}
-            <span className={styles.userName}>{userName}</span>
+            <span className={styles.Sidebar__userName}>{userName}</span>
           </div>
         ) : (
           <span className={styles.footerPlaceholderText}></span>
@@ -114,5 +128,12 @@ const Sidebar = memo(({ className = '', onNewChat, onToggleSettings }) => {
 });
 
 Sidebar.displayName = 'Sidebar';
+
+// Define PropTypes
+Sidebar.propTypes = {
+  className: PropTypes.string,
+  onToggleSettings: PropTypes.func,
+  onToggleSidebar: PropTypes.func
+};
 
 export default Sidebar; 

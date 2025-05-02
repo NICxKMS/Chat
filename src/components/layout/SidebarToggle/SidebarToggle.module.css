@@ -1,76 +1,85 @@
-.toggleContainer {
+.SidebarToggle__container {
+  transition: opacity var(--transition-duration-short) ease;
+  opacity: 1;
   position: fixed;
-  top: 1rem;
-  left: 1rem;
+  top: var(--space-md);
+  left: var(--space-md);
   z-index: 900;
   pointer-events: none;
 }
 
+.SidebarToggle__container--hidden {
+  opacity: 0;
+}
+
 /* Media queries for mobile view */
-@media (max-width: 768px) {
-  .toggleContainer {
+@media (width <= 600px) {
+  .SidebarToggle__container {
     /* Keep at top-left corner */
-    top: 1rem;
-    left: 1rem;
+    top: var(--space-md);
+    left: var(--space-md);
     z-index: 900; /* Keep high z-index to stay above other elements */
   }
   
-  .toggleButton {
+  .SidebarToggle__button {
     width: 38px;
     height: 38px;
   }
 }
 
-.toggleButton {
+.SidebarToggle__button {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
-  background-color: var(--chat-bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  background:none;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.2s ease;
+  transition: all var(--transition-duration-short) ease;
 }
 
-.toggleButton:hover {
+.SidebarToggle__button:hover {
   background-color: var(--hover);
   transform: scale(1.05);
 }
 
-.toggleButton:active {
+.SidebarToggle__button:active {
   transform: scale(0.95);
 }
 
-.hamburger {
-  width: 20px;
-  height: 16px;
+.SidebarToggle__hamburger {
+  width: var(--space-lg);
+  height: var(--space-md);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
 }
 
-.bar {
-  height: 2px;
+.SidebarToggle__bar {
+  height: var(--border-width-md);
   width: 100%;
   background-color: var(--text);
-  border-radius: 2px;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  border-radius: var(--border-width-md);
+  transition: transform var(--transition-duration-medium) ease, opacity var(--transition-duration-medium) ease;
 }
 
 /* Animation for the hamburger to X transformation */
-.active .bar:nth-child(1) {
+.SidebarToggle__button--active .SidebarToggle__bar:nth-child(1) {
   transform: translateY(7px) rotate(45deg);
 }
 
-.active .bar:nth-child(2) {
+.SidebarToggle__button--active .SidebarToggle__bar:nth-child(2) {
   opacity: 0;
 }
 
-.active .bar:nth-child(3) {
+.SidebarToggle__button--active .SidebarToggle__bar:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
+}
+
+.SidebarToggle__container--hidden .SidebarToggle__button {
+  pointer-events: none;
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './SettingsGroup.module.css';
+import commonStyles from '../common/ControlStyles.module.css';
 
 const SettingsGroup = ({
   title,
@@ -15,10 +16,12 @@ const SettingsGroup = ({
     setIsExpanded(!isExpanded);
   };
 
+  const groupClasses = [commonStyles.controlContainer, styles.SettingsGroup];
+  if (isExpanded) groupClasses.push(styles['SettingsGroup--expanded']);
   return (
-    <div className={`${styles.group} ${isExpanded ? styles.expanded : ''}`} id={id}>
+    <div className={groupClasses.join(' ')} id={id}>
       <div 
-        className={styles.header}
+        className={[commonStyles.controlHeader, styles.SettingsGroup__header].join(' ')}
         onClick={toggleExpanded}
         role="button"
         aria-expanded={isExpanded}
@@ -30,10 +33,10 @@ const SettingsGroup = ({
           }
         }}
       >
-        <div className={styles.titleContainer}>
-          <h3 className={styles.title}>{title}</h3>
+        <div className={styles.SettingsGroup__titleContainer}>
+          <h3 className={commonStyles.controlLabel}>{title}</h3>
           <button 
-            className={`${styles.expandButton} ${isExpanded ? styles.expanded : ''}`}
+            className={styles.SettingsGroup__expandButton}
             aria-label={isExpanded ? 'Collapse section' : 'Expand section'}
             onClick={(e) => {
               e.stopPropagation();
@@ -45,7 +48,7 @@ const SettingsGroup = ({
               height="16" 
               viewBox="0 0 16 16" 
               xmlns="http://www.w3.org/2000/svg"
-              className={styles.expandIcon}
+              className={styles.SettingsGroup__expandIcon}
             >
               <path 
                 fillRule="evenodd" 
@@ -55,11 +58,11 @@ const SettingsGroup = ({
             </svg>
           </button>
         </div>
-        {description && <p className={styles.description}>{description}</p>}
+        {description && <p className={commonStyles.controlDescription}>{description}</p>}
       </div>
       
       {isExpanded && (
-        <div className={styles.content}>
+        <div className={`${styles.SettingsGroup__content} animation-slide-up`}>
           {children}
         </div>
       )}

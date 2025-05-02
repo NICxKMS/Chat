@@ -8,10 +8,6 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/image.webp',
-  '/static/css/*',
-  '/static/js/*',
-  '/static/media/*',
-  '/static/fonts/*',
 
   // Include built assets dynamically with patterns (if applicable in dev tools)
 ];

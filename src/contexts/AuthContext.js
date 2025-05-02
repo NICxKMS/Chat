@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useToast } from './ToastContext';
+import { useLoading } from './LoadingContext';
 // Firebase is dynamically imported to avoid blocking
 
 const AuthContext = createContext();
@@ -15,31 +17,34 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [idToken, setIdToken] = useState(null);
   const [loading, setLoading] = useState(false); // Changed to false initially - we're proceeding anonymously
+  // Sync with global loading context for auth
+  const [, startAuthLoading, stopAuthLoading] = useLoading('auth');
   const [error, setError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false); // State to trigger login UI
   const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
+  const { showToast } = useToast();
 
-  const login = async () => {
-    // This function now simply signals the intent to log in.
-    // The actual login mechanism (popup, redirect) will be handled
-    // by a dedicated Login component/page triggered by isLoggingIn state.
+  useEffect(() => {
+    if (loading) startAuthLoading(); else stopAuthLoading();
+  }, [loading, startAuthLoading, stopAuthLoading]);
+
+  const login = useCallback(async () => {
     console.log("Login button clicked, setting isLoggingIn to true.");
     setIsLoggingIn(true);
-  };
+  }, [setIsLoggingIn]);
 
-  const logout = async () => {
-    // Only attempt logout if Firebase is initialized
+  const logout = useCallback(async () => {
     if (!isFirebaseInitialized) {
       console.log("Firebase not initialized yet, cannot logout.");
       return;
     }
-    
-    // Dynamically import Firebase auth functions
     const { getFirebaseAuth } = await import(/* webpackChunkName: "firebase-config" */ '../firebaseConfig');
     const { signOut: firebaseSignOut } = await import(/* webpackChunkName: "firebase-auth" */ 'firebase/auth');
     const auth = getFirebaseAuth();
     if (!auth) {
-      setError("Firebase not initialized.");
+      const msg = "Firebase not initialized.";
+      setError(msg);
+      showToast({ type: 'error', message: msg });
       return;
     }
     try {
@@ -47,9 +52,11 @@ export const AuthProvider = ({ children }) => {
       console.log("Sign out successful.");
     } catch (err) {
       console.error("Logout failed:", err);
-      setError(err.message || 'Failed to logout.');
+      const msg = err.message || 'Failed to logout.';
+      setError(msg);
+      showToast({ type: 'error', message: msg });
     }
-  };
+  }, [isFirebaseInitialized, setError, showToast]);
 
   // Effect to listen for Firebase auth state changes
   useEffect(() => {
@@ -84,12 +91,15 @@ export const AuthProvider = ({ children }) => {
             // Force refresh is false by default, gets cached token if available
             const token = await user.getIdToken();
             setIdToken(token);
+            try { localStorage.setItem('idToken', token); } catch (e) { console.warn('Failed to cache idToken', e); }
             setError(null); // Clear previous errors on successful login
             setIsLoggingIn(false); // Ensure login UI closes if open
             console.log("User signed in, token obtained.");
           } catch (err) {
             console.error("Failed to get ID token:", err);
-            setError("Failed to get authentication token.");
+            const msg = "Failed to get authentication token.";
+            setError(msg);
+            showToast({ type: 'error', message: msg });
             setIdToken(null);
             // Optionally sign out the user if token fetch fails critically
             const { signOut: firebaseSignOut } = await import(/* webpackChunkName: "firebase-auth" */ 'firebase/auth');
@@ -98,6 +108,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           // User is signed out
           setIdToken(null);
+          try { localStorage.removeItem('idToken'); } catch (e) { console.warn('Failed to remove cached idToken', e); }
           setIsLoggingIn(false); // Ensure login UI closes if open
           console.log("User signed out.");
         }
@@ -116,20 +127,20 @@ export const AuthProvider = ({ children }) => {
         unsubscribe();
       }
     };
-  }, []);
+  }, [showToast]);
 
-  const value = {
+  const value = useMemo(() => ({
     currentUser,
     idToken,
     loading,
     error,
     login,
     logout,
-    isAuthenticated: !!currentUser && !!idToken, // Use state directly
-    isLoggingIn, // Expose state to trigger login UI
-    setIsLoggingIn, // Allow login UI to close itself
-    isFirebaseInitialized // Expose whether Firebase is initialized
-  };
+    isAuthenticated: !!currentUser && !!idToken,
+    isLoggingIn,
+    setIsLoggingIn,
+    isFirebaseInitialized
+  }), [currentUser, idToken, loading, error, login, logout, isLoggingIn, setIsLoggingIn, isFirebaseInitialized]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }; 

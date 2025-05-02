@@ -3,11 +3,9 @@
 /oldreadme
 # Environment variables
 .env
-.env.development
-.env.production
-/build
-/.cursor
-/.firebase
+.env.local
+.env.test
+/bak
 # Logs
 logs/
 *.log
@@ -22,6 +20,8 @@ pids/
 *.seed
 *.pid.lock
 
+
+/plans
 # Coverage and test output
 coverage/
 *.lcov

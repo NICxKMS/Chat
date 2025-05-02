@@ -1,7 +1,9 @@
-import { memo, lazy, useRef, useEffect, useState, useCallback, Suspense } from 'react';
+import { memo, lazy, useRef, useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { useChatLogic } from '../../../hooks/useChatLogic';
 import { ChevronDownIcon } from '@primer/octicons-react';
 import styles from './ChatContainer.module.css';
+import throttle from 'lodash.throttle';
+import PropTypes from 'prop-types';
 
 // Lazy-loaded components
 const MessageList = lazy(() => import(/* webpackChunkName: "chat-messagelist" */ '../MessageList'));
@@ -16,9 +18,6 @@ const ChatContainer = memo(({
   selectedModel: passedSelectedModel,
   isLoadingModels, 
   toggleModelSelector,
-  onNewChat,
-  onResetChat,
-  onDownloadChat,
   onToggleSettings,
   isSidebarOpen,
   isSettingsOpen,
@@ -38,44 +37,34 @@ const ChatContainer = memo(({
 
   const messageListRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const containerRef = useRef(null);
   const isActiveChat = chatHistory.length > 0;
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
-  const prevChatHistoryLength = useRef(chatHistory.length);
   const prevWaitingForResponse = useRef(isWaitingForResponse);
 
-  // Effect to update input height CSS variable for scroll button positioning
-  useEffect(() => {
-    const updateInputHeight = () => {
-      const inputContainer = document.querySelector('.inputContainer') || 
-                            document.querySelector(`.${styles.fixedInputArea}`);
-      if (inputContainer) {
-        const height = inputContainer.offsetHeight;
-        document.documentElement.style.setProperty('--input-height', `${height}px`);
-      }
-    };
-
-    // Initial update
-    updateInputHeight();
-
-    // Set up observer to track input container height changes
-    const resizeObserver = new ResizeObserver(updateInputHeight);
-    const inputContainer = document.querySelector('.inputContainer') || 
-                          document.querySelector(`.${styles.fixedInputArea}`);
-    
-    if (inputContainer) {
-      resizeObserver.observe(inputContainer);
+  // === Performance-tuned handlers ===
+  // Smooth scroll to bottom, memoized
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior });
+      setShowScrollToBottomButton(false);
     }
+  }, []);
 
-    // Clean up observer on unmount
-    return () => {
-      if (inputContainer) {
-        resizeObserver.unobserve(inputContainer);
-      }
-      resizeObserver.disconnect();
-    };
-  }, [chatHistory, editingMessage]); // Re-run when chat history changes or edit mode changes
+  // Scroll handler for showing/hiding the scroll-to-bottom button, throttled
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const scrollThreshold = 10;
+    const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
+    setShowScrollToBottomButton(!atBottom);
+  }, []);
+  const throttledHandleScroll = useMemo(
+    () => throttle(handleScroll, 100),
+    [handleScroll]
+  );
 
-  // Function to ensure the input field is focused
+  // Focus input helper, memoized
   const focusInputField = useCallback(() => {
     // Use a timeout to ensure the component is fully rendered and mounted
     setTimeout(() => {
@@ -109,37 +98,18 @@ const ChatContainer = memo(({
     prevWaitingForResponse.current = isWaitingForResponse;
   }, [isWaitingForResponse, isSidebarOpen, isSettingsOpen, isModelSelectorOpen, editingMessage, focusInputField]);
 
-  // Function to smoothly scroll to the bottom
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: behavior
-      });
-      // Ensure button is hidden immediately after explicitly scrolling
-      setShowScrollToBottomButton(false);
-    }
-  }, []);
-
-  // Effect when new messages arrive (NO LONGER MANAGES BUTTON VISIBILITY)
+  // Effect to handle manual scrolling by the user (NOW MANAGES BUTTON VISIBILITY)
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container || !isActiveChat) return;
-
-    // Only proceed if chat history actually grew
-    if (chatHistory.length <= prevChatHistoryLength.current) {
-      prevChatHistoryLength.current = chatHistory.length;
-      return;
-    }
-
-    // Update previous length tracking
-    prevChatHistoryLength.current = chatHistory.length;
-
-    // We might still need to check scroll position *after* history updates
-    // to show the button if the new content itself pushes the view up.
-    // Let's add a check within the scroll handler effect as well.
-
-  }, [chatHistory, isActiveChat]); // Removed scrollToBottom from deps as it's not used here
+    if (!container) return;
+    // Initial check
+    throttledHandleScroll();
+    container.addEventListener('scroll', throttledHandleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', throttledHandleScroll);
+      throttledHandleScroll.cancel();
+    };
+  }, [throttledHandleScroll]);
 
   // Effect to handle manual scrolling by the user (NOW MANAGES BUTTON VISIBILITY)
   useEffect(() => {
@@ -164,17 +134,10 @@ const ChatContainer = memo(({
   // Need another effect to check scroll position when chatHistory length changes,
   // as new content might make the button necessary even if user didn't scroll.
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    // Check after a short delay to allow DOM to update with new message height
-    const checkScrollTimeout = setTimeout(() => {
-      const scrollThreshold = 10;
-      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
-      setShowScrollToBottomButton(!atBottom);
-    }, 100); // Adjust delay if needed
-
-    return () => clearTimeout(checkScrollTimeout);
-  }, [chatHistory]); // Run when chatHistory changes
+    // React to new messages by re-checking scroll only once after DOM update
+    const timeout = setTimeout(() => throttledHandleScroll(), 100);
+    return () => clearTimeout(timeout);
+  }, [chatHistory, throttledHandleScroll]);
 
   // Use the selected model passed down for the button, but model from logic elsewhere
   const displayModelName = passedSelectedModel?.name;
@@ -187,9 +150,9 @@ const ChatContainer = memo(({
     setEditingMessage(message);
     // Scroll to input area if needed
     setTimeout(() => {
-      const inputArea = document.querySelector(`.${styles.fixedInputArea}`);
+      const inputArea = document.querySelector(`.${styles.ChatContainer__fixedInputArea}`);
       if (inputArea) {
-        inputArea.scrollIntoView({ behavior: 'smooth' });
+        // inputArea.scrollIntoView({ behavior: 'smooth' }); // Commented out to prevent scroll
       }
     }, 100);
   }, [isWaitingForResponse]);
@@ -207,15 +170,16 @@ const ChatContainer = memo(({
   }, [isWaitingForResponse, editingMessage]);
 
   // Classes for the main container
-  const chatContainerClasses = `${styles.chatContainer} ${isActiveChat ? styles.activeChat : styles.emptyChat} ${editingMessage ? styles.editingMode : ''}`;
+  const chatContainerClasses = `${styles.ChatContainer} ${isActiveChat ? styles['ChatContainer--activeChat'] : styles['ChatContainer--emptyChat']} ${editingMessage ? styles['ChatContainer--editingMode'] : ''}`;
 
   // Helper function to render the input area contents
   const renderInputAreaContents = (isFixedLayout) => {
-    const isStaticLayout = !isFixedLayout;
-    
+    // Determine if it's the initial chat state
+    const isInitialChat = !isActiveChat;
+
     return (
       <>
-        {/* Global Metrics: Only show when fixed */} 
+        {/* Global Metrics: Only show when fixed */}
         {isFixedLayout && !editingMessage && (
           <Suspense fallback={<div className={styles.globalMetricsPlaceholder} />}>
             <GlobalMetricsBar 
@@ -225,14 +189,13 @@ const ChatContainer = memo(({
           </Suspense>
         )}
 
-        <div className={styles.inputControlsWrapper}> 
-          <Suspense fallback={<div className={styles.inputPlaceholder} />}>
+        <div className={styles.ChatContainer__inputControlsWrapper}> 
+          <Suspense fallback={<div className={styles.ChatContainer__inputPlaceholder} />}>
             <ChatInput
+              isInitialChat={isInitialChat}
               onSendMessage={handleSendMessage}
               disabled={isWaitingForResponse} 
               selectedModel={modelFromLogic} 
-              onNewChat={onNewChat}
-              isStaticLayout={isStaticLayout}
               editingMessage={editingMessage}
               onCancelEdit={handleCancelEdit}
               isStreaming={isWaitingForResponse}
@@ -245,10 +208,27 @@ const ChatContainer = memo(({
     );
   };
 
+  // Update CSS var for input height
+  useEffect(() => {
+    if (!chatHistory.length) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const updateInputHeight = () => {
+      const inputArea = container.querySelector(`.${styles.ChatContainer__fixedInputArea}`);
+      if (inputArea) {
+        const height = inputArea.getBoundingClientRect().height;
+        container.style.setProperty('--input-height', `${height}px`);
+      }
+    };
+    updateInputHeight();
+    window.addEventListener('resize', updateInputHeight);
+    return () => window.removeEventListener('resize', updateInputHeight);
+  }, [chatHistory]);
+
   return (
-    <div className={chatContainerClasses}>
+    <div ref={containerRef} className={chatContainerClasses}>
       {/* Container for the Model Selector Button */}
-      <div className={styles.modelButtonContainer}>
+      <div className={styles.ChatContainer__modelButtonContainer}>
         <Suspense fallback={null}> 
           <ModelSelectorButton 
             selectedModelName={displayModelName}
@@ -259,12 +239,12 @@ const ChatContainer = memo(({
         </Suspense>
       </div>
 
-      <div className={styles.chatAreaWrapper}>
-        <div className={styles.chatArea}>
+      <div className={styles.ChatContainer__chatAreaWrapper}>
+        <div className={styles.ChatContainer__chatArea}>
           {isActiveChat ? (
             // Active Chat: Render MessageList inside scroll container
-            <div className={styles.scrollContainer} ref={scrollContainerRef}>
-              <div className={styles.scrollInner}>
+            <div className={styles.ChatContainer__scrollContainer} ref={scrollContainerRef}>
+              <div className={styles.ChatContainer__scrollInner}>
                 <Suspense fallback={<div className={styles.messagePlaceholder} />}>
                   <MessageList
                     ref={messageListRef}
@@ -277,13 +257,13 @@ const ChatContainer = memo(({
             </div>
           ) : (
             // Empty Chat: Render Greeting and Input Area (Static Layout)
-            <div className={styles.emptyChatContent}>
-              <div className={styles.greetingMessage}>
+            <div className={styles.ChatContainer__emptyChatContent}>
+              <div className={styles.ChatContainer__greetingMessage}>
                 <h2>Welcome to AI Chat!</h2>
                 <p>Select a model above and start your conversation.</p>
               </div>
               {/* Render input area directly below greeting */}
-              <div className={`${styles.inputArea} ${styles.staticInputArea}`}> 
+              <div className={`${styles.ChatContainer__inputArea} ${styles.ChatContainer__staticInputArea}`}> 
                 {renderInputAreaContents(false)} 
               </div>
             </div>
@@ -293,7 +273,7 @@ const ChatContainer = memo(({
         {/* Scroll to Bottom Button */}
         {showScrollToBottomButton && isActiveChat && (
           <button
-            className={styles.scrollToBottomButton}
+            className={styles.ChatContainer__scrollToBottomButton}
             onClick={() => scrollToBottom('smooth')}
             aria-label="Scroll to bottom"
             title="Scroll to bottom"
@@ -305,7 +285,7 @@ const ChatContainer = memo(({
 
       {/* Fixed Input Area Wrapper (Only rendered when chat is active) */}
       {isActiveChat && (
-        <div className={`${styles.inputArea} ${styles.fixedInputArea}`}> 
+        <div className={`${styles.ChatContainer__inputArea} ${styles.ChatContainer__fixedInputArea}`}> 
           {renderInputAreaContents(true)} 
         </div>
       )}
@@ -314,5 +294,15 @@ const ChatContainer = memo(({
 });
 
 ChatContainer.displayName = 'ChatContainer';
+
+ChatContainer.propTypes = {
+  selectedModel: PropTypes.object, // Shape could be refined
+  isLoadingModels: PropTypes.bool,
+  toggleModelSelector: PropTypes.func.isRequired,
+  onToggleSettings: PropTypes.func.isRequired,
+  isSidebarOpen: PropTypes.bool,
+  isSettingsOpen: PropTypes.bool,
+  isModelSelectorOpen: PropTypes.bool
+};
 
 export default ChatContainer; 
