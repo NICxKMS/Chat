@@ -186,14 +186,15 @@ const Layout = () => {
         />
       )}
 
-      {/* Conditionally render Settings Panel */} 
-      {/* Always render Settings Panel for CSS transitions, control visibility via props/classes */}
-      <Suspense fallback={null}> {/* No visible fallback needed */}
-        <SettingsPanel 
-          isOpen={isSettingsOpen} 
-          onClose={toggleSettings} 
-        /> 
-      </Suspense>
+      {/* Conditionally render Settings Panel ONLY when open */}
+      {isSettingsOpen && (
+        <Suspense fallback={null}> {/* Fallback if needed while loading */}
+          <SettingsPanel 
+            isOpen={isSettingsOpen} // Prop might still be useful internally for the component
+            onClose={toggleSettings} 
+          /> 
+        </Suspense>
+      )}
     </div>
   );
 };

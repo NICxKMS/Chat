@@ -28,7 +28,6 @@ coverage/
 .nyc_output
 
 # Build and compiled files
-build/
 Release/
 *.tsbuildinfo
 
@@ -50,12 +49,11 @@ jspm_packages/
 
 # Output of 'npm pack'
 *.tgz
-
+/plans
 # Framework-specific files
 .next/
 out/
 .nuxt/
-dist/
 .cache/
 .vuepress/dist
 .temp
