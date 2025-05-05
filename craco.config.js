@@ -1,28 +1,27 @@
-let BundleAnalyzerPlugin;
-try {
-  BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-} catch (error) {
-  console.warn('webpack-bundle-analyzer not found. Bundle analysis will be disabled.');
-  BundleAnalyzerPlugin = null;
-}
-let ESLintPlugin;
-try {
-  ESLintPlugin = require('eslint-webpack-plugin').ESLintPlugin;
-} catch (error) {
-  console.warn('eslint-webpack-plugin not found. ESLint will be disabled.');
-  ESLintPlugin = null;
-}
+// let BundleAnalyzerPlugin;
+// try {
+//   BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+// } catch (error) {
+//   console.warn('webpack-bundle-analyzer not found. Bundle analysis will be disabled.');
+//   BundleAnalyzerPlugin = null;
+// }
+// let ESLintPlugin;
+// try {
+//   ESLintPlugin = require('eslint-webpack-plugin').ESLintPlugin;
+// } catch (error) {
+//   console.warn('eslint-webpack-plugin not found. ESLint will be disabled.');
+//   ESLintPlugin = null;
+// }
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { version } = require('./package.json');
 
 module.exports = {
-  // devServer: {
-  //   port: 5000,
-  //   headers: {
-  //     'Cross-Origin-Embedder-Policy': 'unsafe-none'
-  //   }
-  // },
+  devServer: {
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'unsafe-none'
+    }
+  },
   webpack: {
     configure: (webpackConfig, { env, paths }) => {
       if (env === 'production') {
@@ -165,18 +164,18 @@ module.exports = {
           }
         });
 
-        if (process.env.ANALYZE === 'true' && BundleAnalyzerPlugin) {
-          webpackConfig.plugins.push(
-            new BundleAnalyzerPlugin({
-              analyzerMode: 'static',
-              reportFilename: 'bundle-report.html',
-              generateStatsFile: true,
-              statsFilename: 'stats.json'
-            })
-          );
-        } else if (process.env.ANALYZE === 'true') {
-          console.warn('Analysis requested (ANALYZE=true), but webpack-bundle-analyzer is not installed or failed to load.');
-        }
+        // if (process.env.ANALYZE === 'true' && BundleAnalyzerPlugin) {
+        //   webpackConfig.plugins.push(
+        //     new BundleAnalyzerPlugin({
+        //       analyzerMode: 'static',
+        //       reportFilename: 'bundle-report.html',
+        //       generateStatsFile: true,
+        //       statsFilename: 'stats.json'
+        //     })
+        //   );
+        // } else if (process.env.ANALYZE === 'true') {
+        //   console.warn('Analysis requested (ANALYZE=true), but webpack-bundle-analyzer is not installed or failed to load.');
+        // }
       }
       return webpackConfig;
     }
@@ -189,8 +188,6 @@ module.exports = {
       }]
     ],
     plugins: [
-      '@babel/plugin-proposal-optional-chaining',
-      '@babel/plugin-proposal-nullish-coalescing-operator',
       '@babel/plugin-syntax-dynamic-import',
       process.env.REACT_APP_ENV === 'production' && ['babel-plugin-transform-react-remove-prop-types', {
         removeImport: true,

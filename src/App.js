@@ -84,6 +84,7 @@ function AppShell() {
           PERFORMANCE_MARKS.APP_START,
           PERFORMANCE_MARKS.COMPONENT_LOAD
         );
+        console.log('[Phase1] Essential components loaded');
       } catch (error) {
         console.error('[Phase1] Error loading essential components:', error);
       }
